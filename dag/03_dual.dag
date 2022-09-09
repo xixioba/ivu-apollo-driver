@@ -1,0 +1,22 @@
+module_config {
+    module_library : "../bazel-bin/modules/drivers/lidar/innovusion/driver/adapter_component.so"
+    components {
+        class_name : "InnovusionComponent"
+        config {
+          name : "innovusion01"
+          config_file_path : "../modules/drivers/lidar/innovusion/conf/01.pb.txt"
+        }
+    }
+}
+
+module_config {
+    module_library : "../bazel-bin/modules/drivers/lidar/innovusion/driver/adapter_component.so"
+    components {
+        class_name : "InnovusionComponent"
+        config {
+          name : "innovusion02"
+          config_file_path : "../modules/drivers/lidar/innovusion/conf/02.pb.txt"
+        }
+    }
+}
+

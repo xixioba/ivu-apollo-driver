@@ -1,0 +1,25 @@
+lidar_name : "test-01"
+frame_id : "innovusion"
+lidar_id : 1
+lidar_ip : "172.168.1.10"
+lidar_port : 8010
+lidar_model : "rev_i"
+reflectance : 1
+multireturn : 1
+
+data_filename : ""
+yaml_filename : ""
+file_speed : 10000
+file_rewind : 0
+file_skip : 0
+
+lidar_udp_port : 0
+processed : 1
+
+pointcloud_channel : "innovusion/lidar/01/PointCloud2"
+scan_channel: "innovusion/lidar/01/ScanCloud"
+imu_channel: "innovusion/lidar/01/Imu"
+
+time_fix_err_ms : 0
+inno_log_level : 2
+enable_fast_sin_cos : 1

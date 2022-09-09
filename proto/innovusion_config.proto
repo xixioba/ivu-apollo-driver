@@ -1,0 +1,40 @@
+syntax = "proto2";
+
+package apollo.drivers.innovusion;
+
+message Config {
+  // common
+  optional string lidar_name = 1 [default = "test-01"];
+  optional string frame_id = 2 [default = "innovusion"];
+  optional uint32 lidar_id = 3 [default = 0];
+  optional string lidar_ip = 4 [default = "172.168.1.10"];
+  optional uint32 lidar_port = 5 [default = 8001];      // 8001/10001,8010
+  optional string lidar_model = 6 [default = "rev_h"];  // rev_h[c], rev_i[k]
+  optional uint32 reflectance = 7 [default = 0];        // 0,1,2,3
+  optional uint32 multireturn = 8 [default = 0];        // only for falcon now
+  // replay
+  optional string data_filename = 9 [default = ""];
+  optional string yaml_filename = 10 [default = ""];
+  optional uint32 file_speed = 11 [default = 10000];
+  optional int32 file_rewind = 12 [default = 0];
+  optional int32 file_skip = 13 [default = 0];
+  // falcon
+  optional int32 lidar_udp_port = 14 [default = -1]; // >0: recv by udp port
+  optional uint32 processed = 15 [default = 0];  // raw/inno_pc
+  optional bool set_falcon_eye = 16 [default = false];
+  optional int32 roi_center_h = 17;
+  optional int32 roi_center_v = 18;
+  // cyber
+  optional string pointcloud_channel = 19;
+  optional string scan_channel = 20;
+  optional string imu_channel = 24;
+  // expand
+  // fix frame time err
+  // 0: nothing, <0: only move forward, >0: use host time
+  optional int32 time_fix_err_ms = 21 [default = 0];
+  // std msgs, see InnoLogLevel, 0:fatal 1, critical, 2:error, 6:info
+  // need at least error level(>=2, like 6) to monitor
+  optional uint32 inno_log_level = 22 [default = 2];
+  // use taylor series to speed up, bu lower accuracy, max err about 0.1%
+  optional uint32 enable_fast_sin_cos = 23 [default = 0];
+}

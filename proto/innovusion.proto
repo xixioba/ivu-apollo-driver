@@ -1,0 +1,71 @@
+syntax = "proto2";
+
+package apollo.drivers.innovusion;
+
+import "modules/common/proto/header.proto";
+
+message PointHVRIT {
+  optional int32 h_angle = 1 [default = 0];
+  optional int32 v_angle = 2 [default = 0];
+  optional uint32 radius = 3 [default = 0];
+  optional uint32 intensity = 4 [default = 0];
+  /* reflectance, 1-254, 255 means a reflector */
+  /* or intensity, also 1-254 & 255=reflector  */
+  optional uint64 timestamp = 5 [default = 0];  // in nano second
+  optional int32 sub_id = 6;
+  optional int32 flags = 7;
+  optional int32 scan_id = 8;
+  optional int32 scan_idx = 9;
+}
+
+message ScanCloud {
+  // same as apollo/drivers/pointcloud
+  optional apollo.common.Header header = 1;
+  optional string frame_id = 2;
+  optional bool is_dense = 3 [default = true];
+  repeated PointHVRIT point = 4;
+  optional double measurement_time = 5;  // in second
+  optional uint32 width = 6;
+  optional uint32 height = 7 [default = 1];
+  // expand
+  optional string model = 8;  // rev_h, rev_i
+  optional uint32 source_id = 9 [default = 0];
+  optional uint64 idx = 10 [default = 0];
+  optional uint64 frame_ns_start = 11 [default = 0];  // in nano second
+  optional uint64 frame_ns_end = 12 [default = 0];    // in nano second
+}
+
+message PointXYZIT {
+  // same as apollo/drivers/PointCloud
+  optional float x = 1 [default = nan];
+  optional float y = 2 [default = nan];
+  optional float z = 3 [default = nan];
+  optional uint32 intensity = 4 [default = 0];
+  /* reflectance, 1-254, 255 means a reflector */
+  /* or intensity, also 1-254 & 255=reflector  */
+  optional uint64 timestamp = 5 [default = 0];  // in nano second
+  // expand
+  optional int32 sub_id = 6 [default = -1];  // belong to box
+  optional int32 flags = 7;
+  optional int32 scan_id = 8;
+  optional int32 scan_idx = 9;
+}
+
+message PointCloud {
+  // same as apollo/drivers/pointcloud
+  optional apollo.common.Header header = 1;
+  optional string frame_id = 2;
+  optional bool is_dense = 3 [default = true];
+  repeated PointXYZIT point = 4;
+  optional double measurement_time = 5;  // in second
+  optional uint64 measurement_time_ms = 14; // test for tsr receive timestamp, in millionsecond
+  optional uint64 send_time = 15; // test for tsr send timestamp, in millionsecond
+  optional uint32 width = 6;
+  optional uint32 height = 7 [default = 1];
+  // expand
+  optional string model = 8;                          // rev_h, rev_i
+  optional uint32 source_id = 9 [default = 0];        // unique id
+  optional uint64 idx = 10 [default = 0];             // index of frame
+  optional uint64 frame_ns_start = 11 [default = 0];  // in nano second
+  optional uint64 frame_ns_end = 12 [default = 0];    // in nano second
+}

@@ -1,0 +1,26 @@
+2022-08-15 13:44:48.133 [ WARN] 10235 utils.cpp:75 strerror: 'Operation not permitted' setschedparam(41)
+2022-08-15 13:44:48.133 [ WARN] 10236 utils.cpp:75 strerror: 'Operation not permitted' setschedparam(2)
+2022-08-15 13:44:48.133 [ WARN] 10239 utils.cpp:75 strerror: 'Operation not permitted' setschedparam(1)
+2022-08-15 13:44:48.133 [ WARN] 10240 utils.cpp:75 strerror: 'Operation not permitted' setschedparam(1)
+2022-08-15 13:44:48.133 [ WARN] 10242 utils.cpp:75 strerror: 'Operation not permitted' setschedparam(35)
+2022-08-15 13:44:48.133 [ WARN] 10241 utils.cpp:75 strerror: 'Operation not permitted' setschedparam(30)
+2022-08-15 13:44:48.133 [ WARN] 10243 utils.cpp:75 strerror: 'Operation not permitted' setschedparam(40)
+2022-08-15 13:44:48.134 [ WARN] 10237 utils.cpp:75 strerror: 'Operation not permitted' setschedparam(2)
+2022-08-15 13:45:18.246 [ERROR] 10878 fault_manager.cpp:498 fault INNO_LIDAR_IN_FAULT_NETWORK1(37) has been set internally. can't receive ptp message in 30 sec.
+pre stat ---------- 
+ time ns: 642842169598,  ptp4l id: 
+mcast: 
+40   eth0            1     0     333300000001
+40   eth0            1     0     01005e000001
+ 
+pmc:  
+ehtool statistics:
+ 
+cur stat ---------- 
+ time ns: 672806678612,  ptp4l id: 
+mcast: 
+40   eth0            1     0     333300000001
+40   eth0            1     0     01005e000001
+ 
+pmc:  
+ehtool statistics:

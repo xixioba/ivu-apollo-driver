@@ -1,0 +1,14 @@
+<cyber>
+    <module>
+        <name>master</name>
+        <dag_conf>../modules/omnisense/drivers/lidar/innovusion/dag/01_single.dag</dag_conf>
+        <process_name>master</process_name>
+        <!-- <exception_handler>respawn</exception_handler> -->
+    </module>
+    <module>
+        <name>slave</name>
+        <dag_conf>../modules/omnisense/drivers/lidar/innovusion/dag/02_single.dag</dag_conf>
+        <process_name>slave</process_name>
+        <!-- <exception_handler>respawn</exception_handler> -->
+    </module>
+</cyber>

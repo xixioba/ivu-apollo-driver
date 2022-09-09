@@ -1,0 +1,42 @@
+
+    device_sn: 14202009
+    b_offset: 28.50745
+    p_offset: 22.508719 
+    b_tilt:
+      - -4.475521
+      - -4.458786
+      - -4.45672
+      - -4.477104
+    b_shift:
+      - 0.021237
+      - -0.04363
+      - -0.002525
+      - -0.017761
+    b_shift_1:
+      - -0.045907
+      - -0.135493
+      - -0.114286
+      - -0.122707
+    h_adjustment: -0.092
+    t_distance_correction: 2.014266
+    b_distance_correction: 1.977249
+    b_e_dec: -0.00032604 
+    b_e_dec_1: 0.00392074 
+    b_e_phase: 75.3
+    nominal_intensity:
+      - 680.0 
+      - 447.0 
+    nominal_voltage: 40000 
+    t_ifactor:
+      - 1.0
+      - 1.0 
+      - 1.0 
+      - 1.0 
+    b_ifactor:
+      - 1.0 
+      - 1.0 
+      - 1.0 
+      - 1.0 
+    t_refl_factor: 0.25
+    b_refl_factor: 0.25
+    

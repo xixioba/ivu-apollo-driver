@@ -1,0 +1,96 @@
+###############################################################################
+# List of Files
+###############################################################################
+README                                       <- This file
+setup_env.bash                               <- Installation script (in future)
+lib/libinnolidar.so                          <- Dynamic library file of the SDK
+lib/libinnolidar.so.1                        <- Dynamic library file of the SDK
+lib/libinnolidar.so.1.2.0                    <- Dynamic library file of the SDK
+src/inno_lidar_api.h                         <- Header file of the SDK
+src/inno_lidar_api_experimental.h            <- Supplemental SDK header
+
+examples/example1.cpp        <- Example cpp file for callback-based APIs (more powerful)
+examples/example2.cpp        <- Example cpp file for blocking read APIs (simpler to use)
+examples/example1.yaml       <- Yaml file to test example (by separate request)
+examples/Makefile            <- Makfile to build example
+examples/example1.dat        <- Data file to test example (by separate request)
+examples/run_example1.bash   <- Script to run test example using sample data file
+examples/run_example1_live.bash   <- Script to run test example using a live LIDAR
+
+apps/pointcloud_server/pointcloud_server.cpp <- pointcloud server source file
+apps/pointcloud_server/pointcloud_client.cpp <- pointcloud client source file
+apps/pointcloud_server/Makefile              <- Makefile to build
+                                                pointcloud_server and
+                                                pointcloud_client
+
+
+###############################################################################
+# SDK external dependency
+###############################################################################
+
+NONE
+
+
+###############################################################################
+# Tested Environments
+###############################################################################
+
+- ubuntu 14.04 + gcc 4.8.4
+- ubuntu 16.04 + gcc 5.4.0
+- ubuntu 18.04 + gcc 7.3.0
+
+
+###############################################################################
+# How to build and run example
+###############################################################################
+- Change to examples directory
+
+  `cd examples'
+
+- Generate example executable binaries.
+
+  `make'
+
+- Run example binary
+
+  `./run_example1.bash'
+
+- Advanced usage of the example binary is described by passing the help flag:
+
+  `LD_LIBRARY_PATH=../lib:${LD_LIBRARY_PATH} ./example1_dynamic -h'
+
+- The example1_dynamic executable is dynamically linked to the SDK library.
+  This meanus you will always need to set
+  `LD_LIBRARY_PATH=../../lib:${LD_LIBRARY_PATH}'
+  immediately before running example1_dynamic,
+  so libinnolidar.so (the SDK library) will be in the library search path.
+
+
+###############################################################################
+# How to build and run pointcloud_server
+###############################################################################
+- Change to pointcloud_server directory
+
+  `cd pointcloud_server'
+
+- Generate pointcloud_server executable binaries.
+
+  `make'
+
+- Run pointcloud_server binary
+
+  `LD_LIBRARY_PATH=../../lib:${LD_LIBRARY_PATH} ./pointcloud_server -h'
+
+- The pointcloud_server executable is dynamically linked to the SDK library.
+  This meanus you will always need to set
+  `LD_LIBRARY_PATH=../../lib:${LD_LIBRARY_PATH}'
+  immediately before running pointcloud_server,
+  so libinnolidar.so (the SDK library) will be in the library search path.
+
+
+###############################################################################
+# SDK API Description
+###############################################################################
+
+- Please see src/inno_lidar_api.h for API description.
+- Please see examples/example1.cpp for examples of how to use the SDK API.

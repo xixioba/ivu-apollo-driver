@@ -14,6 +14,7 @@
 
 #include <dirent.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 
 #include <utility>
 #include <vector>
@@ -73,7 +74,7 @@ void *RawReceiver::receive_loop_() {
       }
     } else {
       Raw4UdpHeader header{};
-      inno_log_verify(n <= 65535, "n too big: %" PRI_SIZED "", n);
+      inno_log_verify(n <= 65535, "n too big: %" PRI_SIZELD, n);
       if (InnoDataPacketUtils::raw4_header_from_net(buf, n, &header)) {
         if (msgid_saver_map_.find(header.idx)
             == msgid_saver_map_.end()) {
@@ -93,7 +94,7 @@ void *RawReceiver::receive_loop_() {
             }
           }
           if (msgid_saver_map_.size() > kMaxMapSize) {
-            inno_log_warning("Current saver count:%" PRI_SIZEU "",
+            inno_log_warning("Current saver count:%" PRI_SIZELU,
                              msgid_saver_map_.size());
           }
         }
@@ -131,7 +132,9 @@ RawSaver::RawSaver(InnoLidarClient *lidar_client,
   msg_idx_ = msg_idx;
   status_ = Status::WORKING;
   pthread_condattr_init(&condattr_);
+#ifndef __APPLE__
   pthread_condattr_setclock(&condattr_, CLOCK_MONOTONIC);
+#endif
   pthread_mutex_init(&mutex_status_, nullptr);
   pthread_mutex_init(&mutex_cache_, nullptr);
   pthread_cond_init(&cond_cache_, &condattr_);
@@ -239,7 +242,11 @@ void RawSaver::flush_loop_() {
       // add_data() will signal when expected id received
       // return ETIMEDOUT when wait expected id timeout
       timespec ts{};
+#if defined(__APPLE__)
+      clock_gettime(CLOCK_REALTIME, &ts);
+#elif defined(__linux__)
       clock_gettime(CLOCK_MONOTONIC, &ts);
+#endif
       ts.tv_sec += kExpectIdTimeOutDefaultS;
       pthread_cond_timedwait(&cond_cache_, &mutex_cache_, &ts);
     }
@@ -358,7 +365,7 @@ void RawSaver::total_size_control_() {
   while ((entry = ::readdir(dp)) != nullptr) {
     if (InnoUtils::ends_with(entry->d_name, ".inno_raw")) {
       std::string entry_full_name = save_path_ + entry->d_name;
-#ifndef __MINGW64__
+#if !(defined(__MINGW64__) || defined(__APPLE__))
       ::lstat(entry_full_name.c_str(), &statbuf);
       total_size += statbuf.st_size;
       uint64_t mtime = InnoUtils::get_timestamp_ns(statbuf.st_mtim);
@@ -444,7 +451,11 @@ void RawSaver::timer_loop_() {
     struct timespec ts{};
     pthread_mutex_lock(&mutex_status_);
     if (status_ == Status::WORKING) {
+#if defined(__APPLE__)
+      clock_gettime(CLOCK_REALTIME, &ts);
+#elif defined(__linux__)
       clock_gettime(CLOCK_MONOTONIC, &ts);
+#endif
       ts.tv_sec += kDataStreamingStopTimeOutDefaultS;
       int ret = pthread_cond_timedwait(&cond_status_, &mutex_status_, &ts);
       if (ret == ETIMEDOUT) {
@@ -458,7 +469,11 @@ void RawSaver::timer_loop_() {
       inno_log_info("[sn%s-%s-%u] saver stopped",
                     sn_.c_str(), cause_.c_str(), msg_idx_);
       // after stopped for kDestroyTimeOutDefaultS, enter destroyed status
+#if defined(__APPLE__)
+      clock_gettime(CLOCK_REALTIME, &ts);
+#elif defined(__linux__)
       clock_gettime(CLOCK_MONOTONIC, &ts);
+#endif
       ts.tv_sec += kDestroyTimeOutDefaultS;
       int ret = pthread_cond_timedwait(&cond_status_, &mutex_status_, &ts);
       if (ret == ETIMEDOUT) {
@@ -507,4 +522,3 @@ void RawSaver::shutdown() {
 }
 
 }  // namespace innovusion
-

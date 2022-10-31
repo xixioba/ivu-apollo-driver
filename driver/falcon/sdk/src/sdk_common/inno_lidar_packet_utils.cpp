@@ -36,14 +36,14 @@ int InnoPacketReader::read_packet(int fd,
     int d_[0];
   };
   inno_log_verify(data_packet && data_len, "NULL pointer");
-  inno_log_verify(message_packet && message_len, "NULL pointer");
+  inno_log_verify(4 && message_len, "NULL pointer");
   inno_log_verify(status_packet && status_len, "NULL pointer");
   inno_log_verify(*data_len >= sizeof(InnoDataPacket),
-                  "%" PRI_SIZEU " too small", *data_len);
+                  "%" PRI_SIZELU " too small", *data_len);
   inno_log_verify(*message_len >= sizeof(InnoDataPacket),
-                  "%" PRI_SIZEU " too small", *message_len);
+                  "%" PRI_SIZELU " too small", *message_len);
   inno_log_verify(*status_len >= sizeof(InnoStatusPacket),
-                  "%" PRI_SIZEU " too small", *status_len);
+                  "%" PRI_SIZELU " too small", *status_len);
   int flag = is_file ? -1 : 0;
 
   int ret = innovusion::NetManager::recv_full_buffer(
@@ -86,10 +86,11 @@ int InnoPacketReader::read_packet(int fd,
       return -1;
     }
     if (header.size < sizeof(InnoDataPacket)) {
-      inno_log_warning("bad data header size %u vs %" PRI_SIZEU "",
+      inno_log_warning("bad data header size %u vs %" PRI_SIZELU,
                        header.size, sizeof(InnoDataPacket));
+      /* FIXME array subscript is above array bounds [-Werror=array-bounds]
       inno_log_info("%x %x %x %x %x %x",
-                    d_[0], d_[1], d_[2], d_[3], d_[4], d_[5]);
+                    d_[0], d_[1], d_[2], d_[3], d_[4], d_[5]); */
       return -2;
     }
     char *read_pt = NULL;
@@ -99,7 +100,7 @@ int InnoPacketReader::read_packet(int fd,
       read_pt = reinterpret_cast<char *>(data_packet + 1);
       *message_len = 0;
       if (*data_len < header.size) {
-        inno_log_warning("not enough buffer message: %" PRI_SIZEU " %u",
+        inno_log_warning("not enough buffer message: %" PRI_SIZELU " %u",
                          *data_len, header.size);
         return -3;
       }
@@ -110,7 +111,7 @@ int InnoPacketReader::read_packet(int fd,
       read_pt = reinterpret_cast<char *>(message_packet + 1);
       *data_len = 0;
       if (*message_len < header.size) {
-        inno_log_warning("not enough buffer message: %" PRI_SIZEU " %u",
+        inno_log_warning("not enough buffer message: %" PRI_SIZELU " %u",
                          *data_len, header.size);
         return -3;
       }
@@ -343,7 +344,7 @@ bool InnoDataPacketUtils::convert_to_xyz_pointcloud(
   if (!append) {
     required_size = sizeof(InnoDataPacket);
     if (required_size > dest_size) {
-      inno_log_warning("not enough size %" PRI_SIZEU " %" PRI_SIZEU "",
+      inno_log_warning("not enough size %" PRI_SIZELU " %" PRI_SIZELU,
                        required_size, dest_size);
       return false;
     }
@@ -370,8 +371,8 @@ bool InnoDataPacketUtils::convert_to_xyz_pointcloud(
         InnoXyzPoint &ipt = dest->xyz_points[dest->item_number]; \
         required_size += sizeof(InnoXyzPoint);             \
         if (required_size > dest_size) {                   \
-            inno_log_warning("not enough size %" PRI_SIZEU " %" \
-                             PRI_SIZEU "",                      \
+            inno_log_warning("not enough size %" PRI_SIZELU " %" \
+                             PRI_SIZELU,                      \
                              required_size, dest_size);    \
             return false;                                  \
         }                                                  \
@@ -409,7 +410,7 @@ bool InnoDataPacketUtils::check_data_packet(const InnoDataPacket &pkt,
     return false;
   }
   if (size && pkt.common.size > size) {
-    inno_log_warning("bad size %" PRI_SIZEU " %u",
+    inno_log_warning("bad size %" PRI_SIZELU " %u",
                      size, pkt.common.size);
     return false;
   }
@@ -445,7 +446,7 @@ bool InnoDataPacketUtils::check_data_packet(const InnoDataPacket &pkt,
         pkt.item_number,
         InnoMultipleReturnMode(pkt.multi_return_mode));
     if (pkt.common.size != s) {
-      inno_log_warning("bad size %" PRI_SIZEU " %u", s, pkt.common.size);
+      inno_log_warning("bad size %" PRI_SIZELU " %u", s, pkt.common.size);
       return false;
     }
     if (!InnoPacketReader::verify_packet_crc32(&pkt.common)) {
@@ -467,7 +468,7 @@ bool InnoDataPacketUtils::check_data_packet(const InnoDataPacket &pkt,
     }
     if (pkt.common.size !=
         pkt.item_size + sizeof(InnoDataPacket)) {
-      inno_log_warning("bad message size %u, %" PRI_SIZEU "",
+      inno_log_warning("bad message size %u, %" PRI_SIZELU,
                        pkt.common.size,
                        pkt.item_size + sizeof(InnoDataPacket));
       return false;
@@ -490,12 +491,12 @@ bool InnoDataPacketUtils::check_status_packet(const InnoStatusPacket &pkt,
     return false;
   }
   if (size && pkt.common.size > size) {
-    inno_log_warning("bad size status packet %" PRI_SIZEU " %u",
+    inno_log_warning("bad size status packet %" PRI_SIZELU " %u",
                      size, pkt.common.size);
     return false;
   }
   if (pkt.common.size != sizeof(pkt)) {
-    inno_log_warning("bad size status packet %u %" PRI_SIZEU "",
+    inno_log_warning("bad size status packet %u %" PRI_SIZELU,
                      pkt.common.size, sizeof(pkt));
     return false;
   }
@@ -550,7 +551,7 @@ int InnoDataPacketUtils::printf_status_packet(const InnoStatusPacket &pkt,
       "sys_cpu_percentage=%hu/%hu/%hu/%hu "
       "motor[5]=%hu/%hu/%hu/%hu/%hu "
       "galvo[5]=%hu/%hu/%hu/%hu/%hu "
-      "in_faults=0x%" PRI_SIZEX " "
+      "in_faults=0x%" PRI_SIZEU
       ";",
       c.point_data_packet_sent, c.point_sent, c.message_packet_sent,
       c.raw_data_read, c.total_frame, c.total_polygon_rotation,
@@ -708,7 +709,7 @@ int InnoSummaryPackage::summary_data_package
     // check whether is expected frame ID
     if (expect_frame_ != (int64_t)pkt.idx && expect_frame_ > 0) {
       inno_log_warning("The expected frame is %" PRI_SIZED ", "
-      "but the current frame is %" PRI_SIZEU "",
+      "but the current frame is %" PRI_SIZEU,
       expect_frame_, pkt.idx);
       if ((int64_t)pkt.idx > expect_frame_) {
         miss_frame_counter_ += (pkt.idx - expect_frame_);

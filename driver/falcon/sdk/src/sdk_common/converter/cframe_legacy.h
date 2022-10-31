@@ -11,6 +11,7 @@
 
 #include <math.h>
 #include <stdint.h>
+#include <sys/types.h>
 
 #ifndef _MSC_VER
 #define DEFINE_COMPACT_STRUCT(x) struct __attribute__((packed)) x
@@ -18,6 +19,10 @@
 #else
 #define DEFINE_COMPACT_STRUCT(x) __pragma(pack(push, 1)) struct x
 #define DEFINE_COMPACT_STRUCT_END __pragma(pack(pop))
+#endif
+
+#ifdef __APPLE__
+#include <unistd.h>
 #endif
 
 /*****************

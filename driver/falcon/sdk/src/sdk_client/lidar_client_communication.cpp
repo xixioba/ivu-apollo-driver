@@ -88,7 +88,7 @@ int LidarClientCommunication::send_get_command_(const char *name,
         memmove(buffer, content, content_size + 1);
         return 0;
       } else {
-        inno_log_error("get_command %s return too big %d %" PRI_SIZEU "",
+        inno_log_error("get_command %s return too big %d %" PRI_SIZELU,
                        name, content_size + 1, buffer_len);
         return -2;
       }
@@ -113,7 +113,7 @@ int LidarClientCommunication::get_attribute(const char *attr,
     if (strlen(buffer) < buffer_len) {
       memcpy(buffer_in, buffer, strlen(buffer) + 1);
     } else {
-      inno_log_warning("buffer too small %" PRI_SIZEU " %" PRI_SIZEU "",
+      inno_log_warning("buffer too small %" PRI_SIZELU " %" PRI_SIZELU,
                        strlen(buffer), buffer_len);
       ret = -1;
     }
@@ -189,7 +189,7 @@ int LidarClientCommunication::get_mode_status(enum InnoLidarMode *mode,
   char buffer[kSmallBufferSize];
   int ret = send_get_command_("mode_status", buffer, sizeof(buffer));
   if (ret == 0) {
-    if (4 == sscanf(buffer, "%d,%d,%d,%" PRI_SIZEU "",
+    if (4 == sscanf(buffer, "%d,%d,%d,%" PRI_SIZEU,
                     reinterpret_cast<int *>(mode),
                     reinterpret_cast<int *>(pre_mode),
                     reinterpret_cast<int *>(status),
@@ -212,9 +212,9 @@ int LidarClientCommunication::get_server_udp_ports_ip(int32_t *port_data,
   inno_log_verify(port_data, "NULL pointer");
   inno_log_verify(port_message, "NULL pointer");
   inno_log_verify(port_status, "NULL pointer");
-  inno_log_verify(ip_len > 32, "%" PRI_SIZEU " must > 32", ip_len);
+  inno_log_verify(ip_len > 32, "%" PRI_SIZELU " must > 32", ip_len);
   ip[ip_len - 1] = 0;
-  inno_log_verify(ip2_len > 32, "%" PRI_SIZEU " must > 32", ip2_len);
+  inno_log_verify(ip2_len > 32, "%" PRI_SIZELU " must > 32", ip2_len);
   ip2[ip2_len - 1] = 0;
 
   char buffer[kSmallBufferSize];
@@ -292,7 +292,7 @@ int LidarClientCommunication::get_server_udp_raw_port(int32_t *port_raw,
                                                       char *ip, size_t ip_len) {
   inno_log_verify(port_raw, "port_raw is NULL pointer");
   inno_log_verify(ip, "ip is NULL pointer");
-  inno_log_verify(ip_len > 32, "ip_len: %" PRI_SIZEU " must > 32", ip_len);
+  inno_log_verify(ip_len > 32, "ip_len: %" PRI_SIZELU " must > 32", ip_len);
 
   ip[ip_len - 1] = 0;
 
@@ -319,7 +319,7 @@ int LidarClientCommunication::set_server_udp_raw_port(uint16_t port_raw) {
 int LidarClientCommunication::set_faults_save_raw(uint64_t value) {
   char cmd[kSmallBufferSize];
 
-  int sn = snprintf(cmd, sizeof(cmd), "faults_save_raw=%" PRI_SIZEX "", value);
+  int sn = snprintf(cmd, sizeof(cmd), "faults_save_raw=%" PRI_SIZED, value);
   inno_log_verify(sn < static_cast<int>(sizeof(cmd)), "exceed buf");
   return send_set_command_(cmd);
 }

@@ -63,7 +63,8 @@ class AsyncLogManager {
   void free_buffer(logContextInfo *buffer_p);
   // Start the  async thread
   // add the job
-  int add_log_job(const logContextInfo &log_info_p);
+  int add_log_job(const logContextInfo &log_info_p,
+                  bool discardable);
   // wait the ACK
   // check the log  need call thread or not
   bool is_log_worker();

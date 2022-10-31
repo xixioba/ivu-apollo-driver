@@ -33,7 +33,7 @@ class LidarCommandConfig {
   }
 
  private:
-  static const uint16_t kDefaultServerLidarPort_ = 8001;
+  static const uint16_t kDefaultServerLidarPort_ = 8002;
   static const uint16_t kDefaultClientLidarPort_ = 8010;
 
  private:
@@ -75,6 +75,7 @@ class CommandParser {
   static const uint16_t kDefaultUdpPort_ = 8010;
   static const uint16_t kDefaultServerTcpPort_ = 8010;
   static const uint16_t kDefaultClientTcpPort_ = 8011;
+  static const uint16_t kDefaultCaliDataUdpPort_ = 8012;
 
  private:
   int argc_;
@@ -87,6 +88,7 @@ class CommandParser {
   int32_t retry_remote;           // T
   std::string udp_client_ip;      // u
   uint16_t udp_port_data;         // U
+  uint16_t udp_port_cali_data;    // Q
   uint16_t udp_port_status;       // W
   uint16_t udp_port_raw;          // k
   uint16_t udp_port_status_local;  // l
@@ -126,6 +128,8 @@ class CommandParser {
   std::string test_command_send_interval_ms;  // X
 
   std::string full_command_line;
+  bool frame_sync_enable{false};
+  std::string frame_sync_target_time;
 };
 
 }  // namespace innovusion

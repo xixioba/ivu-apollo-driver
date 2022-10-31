@@ -8,6 +8,10 @@
 
 #include "pcs/command_test.h"
 
+#ifdef __MINGW64__
+#define _CRT_RAND_S
+#include <stdlib.h>
+#endif
 #include <utility>
 #include "pcs/pc_server_ws_processor.h"
 
@@ -134,9 +138,18 @@ std::string CommandTest::get_value(const std::string& name,
     if (name.find("set_") == 0) {
       if (name == "set_roi") {
         unsigned int seed = InnoUtils::get_time_ns(CLOCK_MONOTONIC_RAW);
+#ifndef __MINGW64__
         uint32_t r = rand_r(&seed);
+#else
+        srand(seed);
+        uint32_t r = rand(); //NOLINT
+#endif
         double h_roi = kMinHRoi_ + (r % 100) * (kMaxHRoi_ - kMinHRoi_) / 100;
+#ifndef __MINGW64__
         r = rand_r(&seed);
+#else
+        r = rand(); //NOLINT
+#endif
         double v_roi = kMinVRoi_ + (r % 100) * (kMaxVRoi_ - kMinVRoi_) / 100;
         true_val = std::to_string(h_roi) + "," + std::to_string(v_roi);
       } else {

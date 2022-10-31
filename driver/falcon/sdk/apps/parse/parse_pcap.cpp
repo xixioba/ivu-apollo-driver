@@ -12,8 +12,16 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netinet/if_ether.h>
+#ifdef __APPLE__
+#include <netinet/ip.h>
+#include <netinet/udp.h>
+#elif defined(__MINGW64__)
+#include <ws2tcpip.h>
+#else
 #include <linux/ip.h>
 #include <linux/udp.h>
+#endif
+
 #include <pcap.h>
 #include <getopt.h>
 #include <stdio.h>
@@ -106,7 +114,7 @@ class PcdRecorder {
     fd_ = open(filename_.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
     inno_log_verify(fd_ >= 0, "cannot open %s", filename_.c_str());
 #ifdef DEBUG
-    inno_log_info("open pcd file %s to record frame %lu",
+    inno_log_info("open pcd file %s to record frame %" PRI_SIZEU,
                   filename_.c_str(), frame_id);
 #endif
     write_dummy_header_();
@@ -146,7 +154,7 @@ class PcdRecorder {
                        sizeof(buffer_) - buffer_cursor_,
                        "%.3f %.3f %.3f %u %u "
                        "%u %u %u %u %u %u "
-                       "%.5f %u %u %lu\n",
+                       "%.5f %u %u %" PRI_SIZEU "\n",
                        x, y, z, ref, channel,
                        in_roi, facet, m_ret, confidence_level,
                        flags, elongation,
@@ -175,18 +183,19 @@ class PcdRecorder {
         "SIZE 4 4 4 4 4 4 4 4 4 4 4 8 4 4 4\n"
         "TYPE F F F U U U U U U U U F U U U\n"
         "COUNT 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1\n"
-        "WIDTH %lu\n"
+        "WIDTH %" PRI_SIZEU "\n"
         "HEIGHT 1\n"
         "VIEWPOINT 0 0 0 1 0 0 0\n"
-        "POINTS %lu\n"
+        "POINTS %" PRI_SIZEU "\n"
         "DATA ascii";
     int r;
     r = snprintf(header_buffer_, sizeof(header_buffer_),
                  pcd_header, reflectance_ ? "reflectance" : "intensity",
                  point_count_, point_count_);
     inno_log_verify(r < int32_t(sizeof(header_buffer_)),
-                    "buffer too small %d vs %lu", r, sizeof(header_buffer_));
-    inno_log_info("write %lu points to pcd file %s",
+                    "buffer too small %d vs %"
+                    PRI_SIZELU, r, sizeof(header_buffer_));
+    inno_log_info("write %" PRI_SIZEU " points to pcd file %s",
                   point_count_,
                   filename_.c_str());
     FILE *file = fopen(filename_.c_str(), "r+");
@@ -195,7 +204,7 @@ class PcdRecorder {
     fseek(file, 0, SEEK_SET);
     size_t fr = fwrite(header_buffer_, 1, strlen(header_buffer_), file);
     inno_log_verify(fr == strlen(header_buffer_),
-                    "fwrite return %lu", fr);
+                    "fwrite return %" PRI_SIZELU, fr);
     fclose(file);
     return;
   }
@@ -237,8 +246,6 @@ class PcdRecorder {
 //
 class RawDataFile {
  private:
-  uint8_t field_type_;
-
   int fd_{-1};
   std::string file_path_;
 
@@ -336,7 +343,8 @@ class RawDataFile {
 
   //
   void dump_cache_() {
-    inno_log_warning("%s dump cache, next packet: %d, cache size: %lu.",
+    inno_log_warning("%s dump cache, next packet: %d, cache size: %"
+                     PRI_SIZELU ".",
                      file_path_.c_str(), this->next_sequence_id_,
                      cache_.size());
 
@@ -470,17 +478,20 @@ class PcapProcessor {
     raw_fd_map_.clear();
 
     inno_log_info("----------Summary----------\n"
-      "data_counter = %lu, error_data_counter = %lu\n"
-      "frame_counter = %lu, miss_frame_counter = %lu, "
-      "partial_sub_frame_counter = %lu, miss_sub_frame_gap_counter = %lu\n"
-      "miss_sub_frame_last_one_counter = %lu, "
-      "miss_sub_frame_except_last_one_counter = %lu\n"
-      "empty_sub_frame_counter = %lu\n"
-      "message_counter = %lu, error_message_counter = %lu\n"
-      "status_counter = %lu, error_status_counter = %lu\n"
-      "total_receive_counter = %lu\n"
-      "total_successfully_counter = %lu,"
-      "total_failed_counter = %lu\n",
+      "data_counter = %" PRI_SIZEU ", error_data_counter = %" PRI_SIZEU "\n"
+      "frame_counter = %" PRI_SIZEU " , miss_frame_counter = %" PRI_SIZEU ", "
+      "partial_sub_frame_counter = %" PRI_SIZEU
+      " , miss_sub_frame_gap_counter = %" PRI_SIZEU "\n"
+      "miss_sub_frame_last_one_counter = %" PRI_SIZEU ", "
+      "miss_sub_frame_except_last_one_counter = %" PRI_SIZEU "\n"
+      "empty_sub_frame_counter = %" PRI_SIZEU "\n"
+      "message_counter = %" PRI_SIZEU
+      " , error_message_counter = %" PRI_SIZEU "\n"
+      "status_counter = %" PRI_SIZEU
+      ", error_status_counter = %" PRI_SIZEU "\n"
+      "total_receive_counter = %" PRI_SIZEU "\n"
+      "total_successfully_counter = %" PRI_SIZEU ","
+      "total_failed_counter = %" PRI_SIZEU "\n",
       data_counter, error_data_counter,
       summary_package_.get_frame_count(),
       summary_package_.get_miss_frame_count(),
@@ -652,10 +663,11 @@ void PcapProcessor::process_data_cpoint_(const InnoDataPacket &pkt) {
 bool PcapProcessor::parse_status_(char *data, int len) {
   InnoStatusPacket *pkt = reinterpret_cast<InnoStatusPacket *>(data);
   status_counter++;
-  inno_log_trace("parse_status status_counter = %lu\n", status_counter);
+  inno_log_trace("parse_status status_counter = %"
+                PRI_SIZEU "\n", status_counter);
   // sanity check after relase-2.0.0-rc138
   if (!InnoDataPacketUtils::check_status_packet(*pkt, 0)) {
-    inno_log_error("corrupted pkt->idx = %lu", pkt->idx);
+    inno_log_error("corrupted pkt->idx = %" PRI_SIZEU "", pkt->idx);
     error_status_counter++;
     return false;
   }
@@ -677,10 +689,10 @@ bool PcapProcessor::parse_data_(char *data, int len) {
   InnoDataPacket *innopkt = NULL;
   InnoDataPacket *pkt = reinterpret_cast<InnoDataPacket *>(data);
   data_counter++;
-  inno_log_trace("parse_data data_counter = %lu\n", data_counter);
+  inno_log_trace("parse_data data_counter = %" PRI_SIZEU "\n", data_counter);
   // sanity check after relase-2.0.0-rc138
   if (!InnoDataPacketUtils::check_data_packet(*pkt, 0)) {
-    inno_log_error("check data error pkt->idx = %lu,  "
+    inno_log_error("check data error pkt->idx = %" PRI_SIZEU ",  "
                   "miss sub frame due to lost IP segment= %u",
                   pkt->idx, pkt->sub_idx);
     error_data_counter++;
@@ -727,7 +739,7 @@ InnoDataPacket * PcapProcessor::get_and_cache_data_
     if (current_cache_->size() > kInnoMaxListSize) {
       cache_package = reinterpret_cast<InnoDataPacket *>
                       (current_cache_->back().data);
-      inno_log_trace("cachepkg.idx= %ld, cachepkg.sub_idx = %d",
+      inno_log_trace("cachepkg.idx= %" PRI_SIZEU ", cachepkg.sub_idx = %d",
                       cache_package->idx, cache_package->sub_idx);
       return cache_package;
     } else {
@@ -767,10 +779,11 @@ void PcapProcessor::flush_cache_parse_data_() {
 bool PcapProcessor::parse_message_(char *data, int len) {
   InnoDataPacket *pkt = reinterpret_cast<InnoDataPacket *>(data);
   message_counter++;
-  inno_log_trace("parse_message message_counter = %lu\n", message_counter);
+  inno_log_trace("parse_message message_counter = %"
+                PRI_SIZEU "\n", message_counter);
   // sanity check after relase-2.0.0-rc138
   if (!InnoDataPacketUtils::check_data_packet(*pkt, 0)) {
-    inno_log_error("corrupted pkt->idx = %lu", pkt->idx);
+    inno_log_error("corrupted pkt->idx = %" PRI_SIZEU "", pkt->idx);
     error_message_counter++;
     return false;
   }
@@ -929,7 +942,8 @@ int PcapProcessor::set_current_ip_dispatcher(unsigned int saddr) {
 void PcapProcessor::parse_inno_package(uint16_t destport, char *data, int len) {
   bool result = false;
   total_receive_counter++;
-  inno_log_trace("total_receive_counter = %lu\n", total_receive_counter);
+  inno_log_trace("total_receive_counter = %" PRI_SIZEU
+                  "\n", total_receive_counter);
   if (destport == RAW_PORT) {
     parse_raw_(data, len);
     return;
@@ -989,7 +1003,8 @@ void PcapProcessor::process_udp(u_char *arg, const struct pcap_pkthdr *pcap_pkt,
     return;
   }
 
-  inno_log_trace("No. = %ld\n", index_udp);
+  inno_log_trace("No. = %" PRI_SIZEU "\n", index_udp);
+#ifndef __APPLE__
   struct iphdr *ipptr = (struct iphdr*)(packet + sizeof(struct ether_header));
   struct udphdr *udpheader = (struct udphdr *)
                 (packet + sizeof(struct ether_header) + sizeof(struct iphdr));
@@ -1002,6 +1017,20 @@ void PcapProcessor::process_udp(u_char *arg, const struct pcap_pkthdr *pcap_pkt,
   uint16_t pt_DFbuffer_len = 0;
 
   uint16_t destport = ntohs(udpheader->dest);
+#else
+  struct ip *ipptr = (struct ip*)(packet + sizeof(struct ether_header));
+  struct udphdr *udpheader = (struct udphdr *)
+                (packet + sizeof(struct ether_header) + sizeof(struct ip));
+  uint16_t frag_off = ntohs(ipptr->ip_off);
+  uint16_t tot_len = ntohs(ipptr->ip_len);
+  char *dataheader = reinterpret_cast<char*>(udpheader)
+                      + sizeof(struct udphdr);
+  uint16_t ihl = ipptr->ip_hl * 4;
+  uint16_t offset = (frag_off & 0x1fff) << 3;
+  uint16_t pt_DFbuffer_len = 0;
+
+  uint16_t destport = ntohs(udpheader->uh_dport);
+#endif
   bool ret = false;
   if ((frag_off & 0x4000) &&
       (destport == PORT || destport == RAW_PORT)) {  // DF
@@ -1017,10 +1046,17 @@ void PcapProcessor::process_udp(u_char *arg, const struct pcap_pkthdr *pcap_pkt,
       expect_offset += tot_len - ihl;
     } else if (destport == PORT || destport == RAW_PORT) {
       udp_head = true;
-      memcpy(pt_buffer + block_len, dataheader,
-               tot_len- ihl - sizeof(struct udphdr));
-      block_len += tot_len - ihl - sizeof(struct udphdr);
-      expect_offset += tot_len - ihl;
+      uint16_t data_len = tot_len - ihl - sizeof(struct udphdr);
+      // prevent exception caused by imcomplete frame
+      if (data_len > 0 && data_len <= sizeof(pt_buffer) - block_len) {
+        memcpy(pt_buffer + block_len, dataheader, data_len);
+        block_len += data_len;
+        expect_offset += tot_len - ihl;
+      } else {
+        inno_log_warning(
+            "Current udp package data_len invalid. Miss UDP package.");
+        return;
+      }
     } else {
       return;
     }
@@ -1048,6 +1084,7 @@ void PcapProcessor::process_udp(u_char *arg, const struct pcap_pkthdr *pcap_pkt,
 void PcapProcessor::process_pcap(u_char *user,
                   const struct pcap_pkthdr *pkthdr,
                   const u_char *packet) {
+#ifndef __APPLE__
   struct iphdr *ipptr;
   struct ether_header *eptr;
   u_char protocol;
@@ -1063,6 +1100,23 @@ void PcapProcessor::process_pcap(u_char *user,
   if (IPPROTO_UDP == protocol) {
     PcapProcessor::process_udp(user, pkthdr, packet, ipptr->saddr);
   }
+#else
+  struct ip *ipptr;
+  struct ether_header *eptr;
+  u_char protocol;
+
+  // get the ether header
+  eptr = (struct ether_header*)packet;
+  if (ntohs(eptr->ether_type) != ETHERTYPE_IP) {
+    return;
+  }
+  // get the ip header
+  ipptr = (struct ip*)(packet + sizeof(struct ether_header));
+  protocol = ipptr->ip_p;
+  if (IPPROTO_UDP == protocol) {
+    PcapProcessor::process_udp(user, pkthdr, packet, ipptr->ip_src.s_addr);
+  }
+#endif
 }
 
 bool handler_pcap_(std::string filename, u_char *user) {
@@ -1123,11 +1177,11 @@ int DatProcessor::process_dat(int fd) {
   inno_log_trace("lidar_header dest recv_addr= %d",
                                 lidar_header.dest.rece_port);
   while (0 != (ret = read(fd, &trans_header, sizeof(trans_header)))) {
-    inno_log_trace(" trans_header send_timestamp= %ld",
+    inno_log_trace(" trans_header send_timestamp= %" PRI_SIZEU,
                                     trans_header.send_timestamp);
-    inno_log_trace(" trans_header recv_timestamp = %ld",
+    inno_log_trace(" trans_header recv_timestamp = %" PRI_SIZEU,
                                     trans_header.recv_timestamp);
-    inno_log_trace(" trans_header size = %ld",
+    inno_log_trace(" trans_header size = %" PRI_SIZEU,
                                     trans_header.size);
     ret = read(fd, lidar_data, trans_header.size);
     if (ret <= 0) {

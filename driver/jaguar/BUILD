@@ -9,9 +9,16 @@ cc_binary(
     name = "libinnovusion_jaguar.so",
     srcs = [
         "driver_jaguar.cc",
-        # "sdk/lib/libinnolidar.so",
-        "sdk/lib/static/libinnolidar.a",
-    ],
+    ] + select({
+        "@platforms//cpu:x86_64": [
+            "sdk/lib/linux-x86/static/libinnolidar.a",
+            # "sdk/lib/linux-x86/libinnolidar.so",
+        ],
+        "@platforms//cpu:aarch64": [
+            "sdk/lib/linux-arm/static/libinnolidar.a",
+            # "sdk/lib/linux-arm/libinnolidar.so",
+        ],
+    }),
     linkopts = [
         "-fvisibility=hidden",
         "-Wl,--exclude-libs,ALL",
@@ -45,19 +52,38 @@ cc_library(
 
 #install jaguar libs(static lib no need anymore)
 filegroup(
-    name = "library_jaguar",
+    name = "library_jaguar_x86",
     srcs = glob([
-        "sdk/lib/*.so*",
+        "sdk/lib/linux-x86/*.so*",
+    ]),
+)
+
+filegroup(
+    name = "library_jaguar_arm",
+    srcs = glob([
+        "sdk/lib/linux-arm/*.so*",
     ]),
 )
 
 install(
     name = "install",
-    data = [
-        ":library_jaguar",
-    ],
+    data = select({
+        "@platforms//cpu:x86_64": [
+            ":library_jaguar_x86",
+        ],
+        "@platforms//cpu:aarch64": [
+            ":library_jaguar_arm",
+        ],
+    }),
     data_dest = "lib/modules/drivers/lidar/innovusion/driver/jaguar",
-    data_strip_prefix = ["sdk/lib"],
+    data_strip_prefix = select({
+        "@platforms//cpu:x86_64": [
+            "sdk/lib/linux-x86",
+        ],
+        "@platforms//cpu:aarch64": [
+            "sdk/lib/linux-arm",
+        ],
+    }),
 )
 
 cpplint()

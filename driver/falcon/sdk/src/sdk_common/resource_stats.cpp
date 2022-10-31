@@ -105,7 +105,8 @@ void ResourceStats::show() {
   int print_off = 0;
   for (int i = 0; i < PACKET_TYPE_MAX; i++) {
     int pr = snprintf(buf + print_off, sizeof(buf) - print_off,
-                      " <%s> %s=%zu/%zu, %s=%zuK/%zuK, "
+                      " <%s> %s=%" PRI_SIZEU "/%" PRI_SIZEU
+                      ", %s=%" PRI_SIZEU "K/%" PRI_SIZEU "K, "
                       "%s=%.2fM/s"
                       "%s%s%s%s;",
                       packet_type_names[i],
@@ -175,7 +176,7 @@ void ResourceStats::get_last_output_info_buffer(char *buf,
                                                 size_t buf_size) {
   std::unique_lock<std::mutex> lk(mutex_);
   inno_log_verify(buf && buf_size > 0,
-                  "buf_size=%" PRI_SIZEU "", buf_size);
+                  "buf_size=%" PRI_SIZELU, buf_size);
   strncpy(buf, last_output_stats_buffer_, buf_size);
   buf[buf_size - 1] = 0;
   return;

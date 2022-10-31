@@ -2,6 +2,11 @@ include version_gen.mk
 
 STATIC_LIB = libinnolidarsdkcommon.a
 DYNA_LIB = libinnolidarsdkcommon.so
+ifeq ($(ARCH_TAG), -mingw64)
+DYNA_LIB = libinnolidarsdkcommon.dll
+else
+DYNA_LIB = libinnolidarsdkcommon.so
+endif
 
 SRC_DIR = ../../src/sdk_common
 OBJ_DIR = ../../obj/sdk_common
@@ -11,27 +16,34 @@ OUT_DIR = ../../lib
 CPPLINT = ../../build/cpplint.py
 CC ?= gcc
 CXX ?= g++
-CFLAGS ?= -I .. -D_GLIBCXX_USE_CXX11_ABI=0 -g2 -std=gnu++11 -Wall -Werror -fpermissive \
+CFLAGS ?= -D_GLIBCXX_USE_CXX11_ABI=0 -g2 -std=gnu++11 -Wall -Werror -fpermissive \
                         $(CUSTOMER_RELEASE_DEF) $(CUSTOMER_SOURCE_DEF)
 LINKFLAGS ?= -pthread -Wl,-Bstatic -static
 LINKFLAGS_DYNA ?= -pthread
 AR ?= ar
 OBJCOPY ?= objcopy
-INC ?= -I./
+INC += -I./ -I ..
 OTHER_CFLAGS ?= -fPIC
 CFLAGS += $(INC) $(OTHER_CFLAGS)
 OTHER_LIB_BUILD_CFLAG ?=
 
 ifeq ($(ARCH_TAG), -mingw64)
-INNO_LIB_BUILD_CFLAG ?= -L ../../lib -linnolidarutils
+	INNO_LIB_BUILD_CFLAG ?= -L ../../lib -linnolidarutils
 endif
+ifeq ($(ARCH_TAG), -macos)
+	CFLAGS += -Wno-error=unused-const-variable -Wno-error=format -Wno-error=unused-command-line-argument
+	INNO_LIB_BUILD_CFLAG ?= ../../lib/libinnolidarutils.a -lc++
+endif
+
 
 ifeq ($(ARCH_TAG), -arm)
 	MARCH_VALUE ?= armv8-a+crc
 	MTUNE_VALUE ?= cortex-a53
 	CFLAGS += -march=$(MARCH_VALUE) -mtune=$(MTUNE_VALUE) -DARCH_ARM64
 else
+ifeq (,$(filter $(ARCH_TAG), -macos -qnx))
 	CFLAGS += -msse4.2
+endif
 endif
 
 SRCS := $(wildcard $(SRC_DIR)/*.cpp $(SRC_DIR)/*/*.cpp)
@@ -57,19 +69,31 @@ $(DEP_DIR) :
 
 $(OUT_DIR)/$(STATIC_LIB):: $(OUT_DIR)
 $(OUT_DIR)/$(STATIC_LIB):: $(OBJS)
+ifeq ($(ARCH_TAG), -macos)
+	$(AR) -r $@- $^
+else
 	$(AR) -r -o $@- $^
+endif
 	$(OBJCOPY) $(OBJCOPY_OPT) $@- $@
 	rm -f $@-
 
 $(OUT_DIR)/$(DYNA_LIB):: $(OUT_DIR)
 $(OUT_DIR)/$(DYNA_LIB):: $(OBJS)
+ifeq ($(ARCH_TAG), -mingw64)
+	$(CC) -shared -Wl,-soname,$(DYNA_LIB) -o $@ $^ $(INNO_LIB_BUILD_CFLAG) $(OTHER_LIB_BUILD_CFLAG)
+else
+ifeq ($(ARCH_TAG), -macos)
+	$(CC) -shared -Wl,-install_name,$(DYNA_LIB).$(DYNA_LIB_MAJ) -o $@- $^ $(INNO_LIB_BUILD_CFLAG) $(OTHER_LIB_BUILD_CFLAG)
+else
 	$(CC) -shared -Wl,-soname,$(DYNA_LIB).$(DYNA_LIB_MAJ) -o $@- $^ $(INNO_LIB_BUILD_CFLAG) $(OTHER_LIB_BUILD_CFLAG)
+endif
 	$(OBJCOPY) $(OBJCOPY_OPT) $(OBJCOPY_OPT_DYNA) $@- $@.$(DYNA_LIB_MAJ).$(DYNA_LIB_MIN).$(DYNA_LIB_BUILD)
 	rm -f $@-
 	rm -f $(OUT_DIR)/$(DYNA_LIB).$(DYNA_LIB_MAJ) $(OUT_DIR)/$(DYNA_LIB)
 	ln -s $(DYNA_LIB).$(DYNA_LIB_MAJ).$(DYNA_LIB_MIN).$(DYNA_LIB_BUILD) $(OUT_DIR)/$(DYNA_LIB).$(DYNA_LIB_MAJ)
 	ln -s $(DYNA_LIB).$(DYNA_LIB_MAJ) $(OUT_DIR)/$(DYNA_LIB)
-	cd -
+	-cd -
+endif
 
 $(OBJ_DIR)/%.o: %.cpp | $(OBJ_DIR) $(DEP_DIR)
 	$(CC) -c $(CFLAGS) $*.cpp -o $(OBJ_DIR)/$*.o

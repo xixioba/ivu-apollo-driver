@@ -11,8 +11,23 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
+
+#ifndef __MINGW64__
 #include <sys/socket.h>
 #include <sys/un.h>
+#else
+#include <ws2tcpip.h>
+
+#define FCGI_LISTENSOCK_FILENO 0
+#define UNIX_PATH_LEN 108
+
+typedef unsigned short int sa_family_t; //NOLINT
+struct sockaddr_un {
+  sa_family_t sun_family;       /* address family AF_LOCAL/AF_UNIX */
+  char sun_path[UNIX_PATH_LEN]; /* 108 bytes of socket address     */
+};
+#endif
+
 #include <fcntl.h>
 #include <unistd.h>
 #include <string>

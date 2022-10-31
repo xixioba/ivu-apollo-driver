@@ -81,6 +81,14 @@ class PCS {
     return (reinterpret_cast<PCS *>(ctx))->data_callback_(pkt);
   }
 
+  static int cali_data_callback_s_(int lidar_handle, void *ctx,
+                                      enum InnoRecorderCallbackType type,
+                                      const char *buffer, int len) {
+    inno_log_verify(type == INNO_RECORDER_CALLBACK_TYPE_CALI,
+      "recorder callback type is not INNO_RECORDER_CALLBACK_TYPE_CALI");
+    return (reinterpret_cast<PCS *>(ctx))->cali_data_callback_(buffer, len);
+  }
+
   static int status_callback_s_(int lidar_handle, void *ctx,
                                 const InnoStatusPacket *pkt) {
     return (reinterpret_cast<PCS *>(ctx))->status_callback_(pkt);
@@ -99,7 +107,8 @@ class PCS {
   void setup_udp_(const std::string &udp_ip, uint16_t port,
                   std::mutex *mutex, UdpSender **sender);
   void setup_udps_(const std::string &udp_ip, uint16_t data_port,
-                   uint16_t message_port, uint16_t status_port);
+                   uint16_t cali_data_port, uint16_t message_port,
+                   uint16_t status_port);
   void setup_raw_udps_(const std::string &udp_ip, uint16_t raw_port);
   int setup_time_sync_listener_(const std::string &name,
                                 const std::string &ip_in,
@@ -115,6 +124,7 @@ class PCS {
   void message_callback_(uint32_t from_remote, enum InnoMessageLevel level,
                          enum InnoMessageCode code, const char *msg);
   int data_callback_(const InnoDataPacket *pkt);
+  int cali_data_callback_(const char* buffer, int len);
   int status_callback_(const InnoStatusPacket *pkt);
   bool is_shutdown_();
   void wait_until_shutdown_();
@@ -198,6 +208,11 @@ class PCS {
   std::mutex status_local_udp_mutex_;
   std::mutex time_sync_udp_listener_mutex_;
 
+  // cali data
+  UdpSender *cali_data_udp_sender_;
+  std::mutex cali_data_udp_mutex_;
+  bool is_send_cali_data;
+
   // raw4
   std::string effective_udp_raw_ip_;
   UdpSender *raw_udp_sender_;
@@ -226,12 +241,12 @@ class PCS {
   size_t cframe_received_;
 
   // last status
-  InnoStatusPacket last_pkt;
+  // InnoStatusPacket last_pkt;
 
   bool shutdown_;
   size_t message_id_;
   size_t message_log_id_;
-  size_t status_id_;
+  // size_t status_id_;
   InnoStatusPacket status_packet_;
   InnoStatusPacket last_status_packet_;
 
@@ -252,7 +267,7 @@ class PCS {
 
   uint16_t last_time_sync_type_;
   // log snapshot
-  bool is_doing_snapshot_{false};
+  // bool is_doing_snapshot_{false};
   std::mutex log_snapshot_mutex_;
   enum LogSnapshotStatus {
     LOG_SNAPSHOT_SUCCESS = 0,

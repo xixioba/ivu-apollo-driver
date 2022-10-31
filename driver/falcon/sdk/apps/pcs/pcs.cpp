@@ -8,7 +8,27 @@
 
 #include "pcs/pcs.h"
 
+#include <stdlib.h>
+#ifndef __MINGW64__
 #include <sys/resource.h>
+#else
+//! https://stackoverflow.com/questions/18551409/localtime-r-support-on-mingw
+#define _POSIX_THREAD_SAFE_FUNCTIONS
+__forceinline struct tm *__cdecl localtime_r(const time_t *_Time,
+                                             struct tm *_Tm) {
+  return localtime_s(_Tm, _Time) ? NULL : _Tm;
+}
+__forceinline struct tm *__cdecl gmtime_r(const time_t *_Time, struct tm *_Tm) {
+  return gmtime_s(_Tm, _Time) ? NULL : _Tm;
+}
+__forceinline char *__cdecl ctime_r(const time_t *_Time, char *_Str) {
+  return ctime_s(_Str, 0x7fffffff, _Time) ? NULL : _Str;
+}
+__forceinline char *__cdecl asctime_r(const struct tm *_Tm, char *_Str) {
+  return asctime_s(_Str, 0x7fffffff, _Tm) ? NULL : _Str;
+}
+#include <time.h>
+#endif
 
 #include <memory>
 #include <string>
@@ -48,6 +68,8 @@ PCS::PCS(const CommandParser &c)
     , status_udp_sender_(NULL)
     , message_udp_sender_(NULL)
     , status_local_udp_sender_(NULL)
+    , cali_data_udp_sender_(NULL)
+    , is_send_cali_data(false)
     , raw_udp_sender_(NULL)
     , raw_udp_field_idx_(0)
     , cframe_converter_(NULL)
@@ -58,6 +80,7 @@ PCS::PCS(const CommandParser &c)
     , png_recorder_(NULL)
     , frame_capturer_(NULL)
     , ws_(NULL)
+    , fw_log_listener_(NULL)
     , time_sync_udp_listener_(NULL)
     , dtc_manager_(NULL)
     , cframe_received_(0)
@@ -79,10 +102,12 @@ PCS::PCS(const CommandParser &c)
   inno_log_info("#############################");
   inno_log_info("command line: %s", cmd_parser_.full_command_line.c_str());
 
+#ifndef __MINGW64__
   struct rlimit limit;
   getrlimit(RLIMIT_STACK, &limit);
-  inno_log_info("Stack Limit = %lu and %lu max",
+  inno_log_info("Stack Limit = %" PRI_SIZEU " and %" PRI_SIZEU " max",
                 limit.rlim_cur, limit.rlim_max);
+#endif
 
   inno_lidar_setup_sig_handler();
 
@@ -93,6 +118,7 @@ PCS::PCS(const CommandParser &c)
 
   setup_udps_(cmd_parser_.udp_client_ip,
               cmd_parser_.udp_port_data,
+              cmd_parser_.udp_port_cali_data,
               cmd_parser_.udp_port_message,
               cmd_parser_.udp_port_status);
 
@@ -122,6 +148,16 @@ PCS::PCS(const CommandParser &c)
                            message_callback_s_,
                            data_callback_s_, status_callback_s_, this);
   inno_log_verify(lidar_, "lidar");
+  inno_lidar_set_recorder_callback(lidar_->get_lidar_handle(),
+    INNO_RECORDER_CALLBACK_TYPE_CALI, cali_data_callback_s_, this);
+
+  if (cmd_parser_.frame_sync_enable) {
+    if (cmd_parser_.frame_sync_target_time.empty()) {
+      set_lidar_attribute("frame_sync", "0.100");
+    } else {
+      set_lidar_attribute("frame_sync", cmd_parser_.frame_sync_target_time);
+    }
+  }
 
   dtc_manager_ = new DtcManager(cmd_parser_.dtc_filename.c_str(), lidar_);
   inno_log_verify(dtc_manager_, "dtc_manager");
@@ -169,9 +205,11 @@ PCS::PCS(const CommandParser &c)
     inno_log_verify(rosbag_recorder_, "rosbag_recorder");
   }
 
-  fw_log_listener_ = new UdpLogListener("fw_log_listener", 7999,
-                                        {0, 500 * 1000}, this);
-  inno_log_verify(fw_log_listener_, "fw_log_listener");
+  if (lidar_->is_live_direct_memory()) {
+    fw_log_listener_ =
+        new UdpLogListener("fw_log_listener", 7999, {0, 500 * 1000}, this);
+    inno_log_verify(fw_log_listener_, "fw_log_listener");
+  }
 
   if (cmd_parser_.png_filename.empty() == false) {
     png_recorder_ = new PngRecorder(1, 1000 * 100, 1000 * 1000, true);
@@ -230,6 +268,13 @@ PCS::~PCS() {
     if (data_udp_sender_) {
       delete data_udp_sender_;
       data_udp_sender_ = NULL;
+    }
+  }
+  {
+    std::unique_lock<std::mutex> lk(cali_data_udp_mutex_);
+    if (cali_data_udp_sender_) {
+      delete cali_data_udp_sender_;
+      cali_data_udp_sender_ = NULL;
     }
   }
   {
@@ -358,7 +403,7 @@ void PCS::setup_udp_(const std::string &udp_ip, uint16_t port,
   inno_log_verify(mutex, "mutex");
   inno_log_info("request to create udp_sender to %s:%hu", udp_ip.c_str(), port);
   {
-    // note that we can do any log while holding this mutex
+    // note that we can not do any log while holding this mutex
     std::unique_lock<std::mutex> lk(*mutex);
     if (*sender != NULL) {
       delete *sender;
@@ -396,7 +441,8 @@ bool PCS::checke_udp_port_conflict_(uint16_t raw_port) {
 }
 
 void PCS::setup_udps_(const std::string &udp_ip, uint16_t data_port,
-                      uint16_t message_port, uint16_t status_port) {
+                      uint16_t cali_data_port, uint16_t message_port,
+                      uint16_t status_port) {
   effective_udp_client_ip_ = udp_ip;
   effective_data_port_ = data_port;
   effective_message_port_ = message_port;
@@ -409,6 +455,8 @@ void PCS::setup_udps_(const std::string &udp_ip, uint16_t data_port,
 
   setup_udp_(udp_ip, message_port, &message_udp_mutex_, &message_udp_sender_);
   setup_udp_(udp_ip, data_port, &data_udp_mutex_, &data_udp_sender_);
+  setup_udp_(udp_ip, cali_data_port, &cali_data_udp_mutex_,
+    &cali_data_udp_sender_);
   setup_udp_(udp_ip, status_port, &status_udp_mutex_, &status_udp_sender_);
 }
 
@@ -717,7 +765,7 @@ int PCS::get_pcs(const std::string &name,
          "sn",
          "model",
          "mode_status",
-         "reboot"
+         "reboot",
          "roi",
          "frame_rate",
          "reflectance_mode",
@@ -741,6 +789,7 @@ int PCS::get_pcs(const std::string &name,
          "stage_n1",
          "stage_deliver",
          "inner_faults",
+         "frame_sync_stats",
         };
     for (std::vector<std::string>::iterator t = cmds.begin();
          t != cmds.end(); ++t) {
@@ -821,6 +870,8 @@ int PCS::get_pcs(const std::string &name,
     } else {
       lidar_->set_lidar(name, value);
     }
+  } else if (name == "send_cali_data") {
+    *result = is_send_cali_data ? "1" : "0";
   } else {
     ret = lidar_->get_attribute(name, result);
   }
@@ -875,8 +926,8 @@ int PCS::set_pcs(const std::string &name,
         current_mode != INNO_LIDAR_MODE_WORK_INTERNAL_1)) {
       inno_log_warning("ignore current restart command, "
                        "ret: %d, current mode: %d, pre_mode: %d, "
-                       "status: %d, transition time: %lums, "
-                       "please try later", ret_val, current_mode,
+                       "status: %d, transition time: %" PRI_SIZEU
+                       "ms, please try later", ret_val, current_mode,
                         pre_mode, status, transition_ms);
       ret = -1;
     } else {
@@ -897,7 +948,8 @@ int PCS::set_pcs(const std::string &name,
         // setup_udps_(std::string(ip), port_data, port_message, port_status);
         inno_log_info("DO NOT use ip %s in request", ip);
       } else if (got == 3) {
-        setup_udps_(source_ip, port_data, port_message, port_status);
+        setup_udps_(source_ip, cmd_parser_.udp_port_cali_data, port_data,
+          port_message, port_status);
         inno_log_info("use ip %s from connection", source_ip.c_str());
       } else {
         inno_log_warning("ignore, invalid request");
@@ -983,7 +1035,7 @@ int PCS::set_pcs(const std::string &name,
                                 values[2],
                                 std::stoul(values[3]));
     } else {
-      inno_log_warning("ignore, invalid request, got %" PRI_SIZEU " params",
+      inno_log_warning("ignore, invalid request, got %" PRI_SIZELU " params",
                        got);
       ret = -1;
     }
@@ -1008,6 +1060,8 @@ int PCS::set_pcs(const std::string &name,
     } else {
       ret = lidar_->set_lidar(name, value);
     }
+  } else if (name == "send_cali_data") {
+    is_send_cali_data = value == "1";
   } else {
     ret = lidar_->set_lidar(name, value);
   }
@@ -1063,10 +1117,12 @@ int PCS::log_snapshot_(const std::string &value) {
 void PCS::log_snapshot_do_(std::string tmp_file, std::string path) {
   inno_log_verify(!tmp_file.empty(), "tmp_file is empty");
   inno_log_verify(!path.empty(), "path is empty");
-  int ret;
+  int ret = 0;
   ret = system(("/app/pointcloud/log_snapshot.sh "
                 + tmp_file + " " + path).c_str());
+#ifndef __MINGW64__
   ret = WEXITSTATUS(ret);
+#endif
   if (ret == 0) {
     inno_log_info("do log snapshot %s down", path.c_str());
     std::unique_lock<std::mutex> lk(log_snapshot_mutex_);
@@ -1386,7 +1442,7 @@ void PCS::message_callback_(uint32_t from_remote,
   if (code == INNO_MESSAGE_CODE_MAX_DISTANCE_CHECK_RESULT) {
     return;
   }
-  inno_log_print(static_cast<enum InnoLogLevel>(level),
+  inno_log_print(static_cast<enum InnoLogLevel>(level), true,
                  from_remote ? "[REMOTE]" : "",
                  static_cast<int>(code), "%s", msg);
   if (!from_remote) {
@@ -1420,36 +1476,45 @@ void PCS::message_callback_(uint32_t from_remote,
 }
 
 int PCS::data_callback_(const InnoDataPacket *pkt) {
+  if (is_send_cali_data)
+    return 0;
+
   {
+    // do not print log here
+    // log udp sender is in blocking mode, log here will be
+    // blocked if log udp sender was blocked.
     std::unique_lock<std::mutex> lk(data_udp_mutex_);
     if (data_udp_sender_) {
       // inno_log_debug("data size=%u", pkt->common.size);
-      bool udp_failed = false;
       int write_err_cnt = 0;
+      int err = 0;
       while (true) {
+        errno = 0;
         ssize_t ret = data_udp_sender_->write(pkt, pkt->common.size, false);
+        // save errno and print it after release mutex
+        err = errno;
         if (ret != -1) {
+          // send success
           break;
         }
-        if (errno == EAGAIN && EWOULDBLOCK) {
-          if (write_err_cnt++ >= 10) {
-            udp_failed = true;
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+          if (++write_err_cnt >= 5) {
             break;
+          } else {
+            // do nothing
           }
         } else {
-          inno_log_error_errno("sendto error: %d", errno);
-          udp_failed = true;
+          // stop re-trying if other errors occurred
           break;
         }
+        usleep(200);
       }
-      if (udp_failed) {
+      if (err != 0) {
         // restart pcs or just re-init data_udp_sender
         std::string udp_ip = std::string(data_udp_sender_->get_ip_str());
         uint16_t data_port = data_udp_sender_->get_port();
         lk.unlock();
         setup_udp_(udp_ip, data_port, &data_udp_mutex_, &data_udp_sender_);
-        inno_log_warning("data udp sender failed, re-init with %s:%d",
-                         udp_ip.c_str(), data_port);
         lk.lock();
         if (data_udp_sender_) {
           data_udp_sender_->write(pkt, pkt->common.size, false);
@@ -1495,6 +1560,90 @@ int PCS::data_callback_(const InnoDataPacket *pkt) {
      }
   }
 
+  return 0;
+}
+
+int PCS::cali_data_callback_(const char* buffer, int len) {
+  if (len == 0) {
+    return 0;
+  }
+
+  static const int MAX_CALI_DATA_POINT =
+      (65536 - sizeof(InnoCaliDataPacket)) / sizeof(InnoCaliDataPoint);
+  static InnoCaliDataPacket* cali_data_packet =
+    reinterpret_cast<InnoCaliDataPacket*>(calloc (1, sizeof(InnoCaliDataPacket)
+    + MAX_CALI_DATA_POINT * sizeof(InnoCaliDataPoint)));
+  static int32_t last_frmae_idx = -1;
+
+  if (!is_send_cali_data) {
+    // reset status
+    last_frmae_idx = -1;
+    return 0;
+  }
+
+  assert(len % sizeof(InnoCaliData) == 0);
+
+  const InnoCaliData *cali_data =
+    reinterpret_cast<const InnoCaliData *>(buffer);
+
+  auto new_packet = [&](uint16_t frame_id) {
+    if (last_frmae_idx != -1) {
+      // crc32
+      uint32_t crc = innovusion::InnoUtils::crc32_start();
+      crc = innovusion::InnoUtils::crc32_do(crc, cali_data_packet->points,
+        cali_data_packet->item_count * sizeof(InnoCaliDataPoint));
+      cali_data_packet->checksum = crc;
+
+      if (last_frmae_idx != frame_id) {
+        cali_data_packet->is_last_sub_frame = 1;
+      }
+
+      // send packet
+      {
+        std::unique_lock<std::mutex> lk(cali_data_udp_mutex_);
+        cali_data_udp_sender_->write(cali_data_packet,
+          sizeof(InnoCaliDataPacket)
+          + cali_data_packet->item_count * sizeof(InnoCaliDataPoint));
+      }
+
+      if (last_frmae_idx != frame_id) {
+        // new frame packet
+        cali_data_packet->sub_id = 0;
+      } else {
+        // new sub frame packet
+        cali_data_packet->sub_id++;
+      }
+    }
+    // reset item count
+    last_frmae_idx = frame_id;
+    cali_data_packet->frame_id = frame_id;
+    cali_data_packet->item_count = 0;
+  };
+
+  int cali_data_count = len / sizeof(InnoCaliData);
+  for (int i = 0; i < cali_data_count; i++, cali_data++) {
+    if (cali_data->frame_id != last_frmae_idx)
+      new_packet(cali_data->frame_id);
+
+    InnoCaliDataPoint& point =
+      cali_data_packet->points[cali_data_packet->item_count++];
+
+    point.h_angle       = cali_data->h_angle;
+    point.v_angle       = cali_data->v_angle;
+    point.channel       = cali_data->channel;
+    point.facet         = cali_data->facet;
+    point.poly_angle    = cali_data->poly_angle;
+    point.galvo_angle   = cali_data->galvo_angle;
+    point.ref_intensity = cali_data->ref_intensity;
+    point.radius        = cali_data->radius;
+    point.intensity     = cali_data->intensity;
+    point.reflectance   = cali_data->reflectance;
+
+    if (sizeof(InnoCaliDataPacket)
+      + cali_data_packet->item_count * sizeof(InnoCaliDataPoint) > 63000) {
+      new_packet(cali_data->frame_id);
+    }
+  }
   return 0;
 }
 
@@ -1558,7 +1707,11 @@ int PCS::status_callback_(const InnoStatusPacket *pkt) {
                       pkt->counters.sys_cpu_percentage[2],
                       pkt->counters.sys_cpu_percentage[3]);
         fclose(file);
+#ifndef __MINGW64__
         sync();
+#else
+        _flushall();
+#endif
 
         long_duration_log_last_save_time_ = spec.tv_sec;
       }
@@ -1647,7 +1800,7 @@ void PCS::run() {
       } else {
         if (count % 100 == 1) {
           inno_log_info("get_mode return mode=%d "
-                        "pre_mode=%d status=%d %lums",
+                        "pre_mode=%d status=%d %" PRI_SIZEU "ms",
                         mode, pre_mode, ss, in_transition_mode_ms);
         }
       }
@@ -1787,7 +1940,7 @@ int PCS::send_file(const std::string &item,
         }
       }
       if (files.size() != 1) {
-        inno_log_warning("there are %" PRI_SIZEU " log snapshot file",
+        inno_log_warning("there are %" PRI_SIZELU " log snapshot file",
                          files.size());
         return 503;
       }

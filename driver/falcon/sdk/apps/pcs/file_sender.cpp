@@ -104,7 +104,7 @@ void* FileSender::loop_() {
   ifs.close();
   PcServerWsProcessor::write_chunk_to_ws_socket_full_s(&conn_, NULL, 0);
   PcServerWsProcessor::flush_buffer_s(&conn_);
-  inno_log_info("send file %s done, total %" PRI_SIZEU " bytes",
+  inno_log_info("send file %s done, total %" PRI_SIZELD " bytes",
                 filename_.c_str(), total_sent);
   return nullptr;
 }

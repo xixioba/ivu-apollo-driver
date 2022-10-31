@@ -58,7 +58,7 @@ MemPoolManager::~MemPoolManager() {
   pthread_mutex_unlock(&mutex_);
   inno_log_info("%s delete MemPoolManager %p pool=%p, "
                 "called=%" PRI_SIZEU ", return-null=%" PRI_SIZEU
-                " request_too_big=%" PRI_SIZEU "",
+                " request_too_big=%" PRI_SIZEU,
                 name_, this, pool_, alloc_call_count_,
                 return_null_count_,
                 request_too_big_);
@@ -160,10 +160,10 @@ MemPool::MemPool(const char *name,
                   name, unit_sz);
   inno_log_verify(unit_nm > 0, "%s unit_number = %u",
                   name, unit_nm);
-  inno_log_verify(alignment > 0, "%s alignment = %" PRI_SIZEU "",
+  inno_log_verify(alignment > 0, "%s alignment = %" PRI_SIZEU,
                   name, alignment);
   inno_log_verify((alignment & (alignment - 1)) == 0,
-                  "%s alignment = %" PRI_SIZEU "",
+                  "%s alignment = %" PRI_SIZEU,
                   name, alignment);
 
   unit_size_ = ((unit_sz - 1) / alignment + 1) * alignment;

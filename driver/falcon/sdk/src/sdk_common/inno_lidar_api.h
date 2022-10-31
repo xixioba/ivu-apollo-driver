@@ -85,7 +85,7 @@
 /*****************
  * data structure
  *****************/
-#if defined(_QNX_) || defined (__MINGW64__)
+#if defined(_QNX_) || defined(__MINGW64__) || defined(__APPLE__)
 struct cpu_set_t;
 #endif
 

@@ -7,14 +7,18 @@
 ##
 
 .PHONY: build
-build: src example
+build: src example pcs
 
 .PHONY: all
 all: build
 
 .PHONY: src
 src:
+ifneq ($(wildcard src/sdk/*),)
+	$(MAKE) -C src build
+else
 	$(MAKE) -C src build_client
+endif
 
 .PHONY: example
 example: | src
@@ -30,9 +34,7 @@ ros: | src
 
 .PHONY: clean
 clean:
-	$(MAKE) -C src/utils clean
-	$(MAKE) -C src/sdk_common clean
-	$(MAKE) -C src/sdk_client clean
+	$(MAKE) -C src clean
 	$(MAKE) -C apps/example clean
 	@! test -f apps/pcs/Makefile || $(MAKE) -C apps/pcs clean_dynamic
 	@! test -f apps/ros/Makefile || $(MAKE) -C apps/ros clean

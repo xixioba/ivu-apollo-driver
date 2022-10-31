@@ -35,7 +35,8 @@ MemMapMemAllocator::MemMapMemAllocator(size_t base_addr, size_t high_addr) {
   map_base_ = MAP_FAILED;
   mem_fd_ = MEM_FD_INIT;
   if (base_addr_ >= high_addr_) {
-    inno_log_warning("init with base_addr:%lx, higi_addr:%lx",
+    inno_log_warning("init with base_addr:%" PRI_SIZELX
+                  ", higi_addr:%" PRI_SIZELX,
                   base_addr_,
                   high_addr_);
     return;

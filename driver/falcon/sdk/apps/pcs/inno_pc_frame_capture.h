@@ -162,7 +162,7 @@ class InnoPcFrameCapture {
 
   bool reflectance_;
 
-  bool pcd_in_sending_;
+  // bool pcd_in_sending_;
   InnoDataPacket *pcd_saved_packet_;
   InnoDataPacket *pcd_saved_packet_headers_;
   uint32_t pcd_block_so_far_;

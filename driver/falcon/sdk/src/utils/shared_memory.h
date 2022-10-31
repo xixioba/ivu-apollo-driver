@@ -9,8 +9,11 @@
 #ifndef UTILS_SHARED_MEMORY_H_
 #define UTILS_SHARED_MEMORY_H_
 
+#ifndef __MINGW64__
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#endif
+
 #include <sys/types.h>
 
 #include "utils/log.h"
@@ -19,9 +22,10 @@ namespace innovusion {
 class SharedMemory {
  public:
   SharedMemory(const char *path, int proj_id, size_t size) {
-    key_t key = ftok(path, proj_id);
     shm_id_ = -1;
     shm_addr_ = NULL;
+#ifndef __MINGW64__
+    key_t key = ftok(path, proj_id);
     if (key == -1) {
       inno_log_warning_errno("ftok %d", key);
     } else {
@@ -36,12 +40,15 @@ class SharedMemory {
         }
       }
     }
+#endif
   }
 
   ~SharedMemory() {
+#ifndef __MINGW64__
     if (shm_addr_) {
       shmdt(shm_addr_detach_);
     }
+#endif
   }
 
   inline bool is_valid() const {

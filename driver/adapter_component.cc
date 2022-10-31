@@ -113,7 +113,8 @@ int InnovusionComponent::data_callback_(void *cframe) {
             point->set_radius(p->radius);  // in cm uint
             point->set_timestamp((uint64_t)(p->ts_100us * 1e5) +
                                  (uint64_t)(frame->ts_us_start) * 1000);
-            point->set_intensity(static_cast<uint>(p->ref));
+            point->set_intensity(static_cast<uint>(p->ref & 0xFF));
+            point->set_elongation(static_cast<uint>((p->ref & 0xFF00) >> 8));
             point->set_flags(p->flags);
             point->set_scan_id(p->scan_id);
             point->set_scan_idx(p->scan_idx);
@@ -139,7 +140,8 @@ int InnovusionComponent::data_callback_(void *cframe) {
             point->set_z(z);
             point->set_timestamp((uint64_t)(p->ts_100us * 1e5) +
                                  (uint64_t)(frame->ts_us_start) * 1000);
-            point->set_intensity(static_cast<uint>(p->ref));
+            point->set_intensity(static_cast<uint>(p->ref & 0xFF));
+            point->set_elongation(static_cast<uint>((p->ref & 0xFF00) >> 8));
             point->set_flags(p->flags);
             point->set_scan_id(p->scan_id);
             point->set_scan_idx(p->scan_idx);
@@ -257,7 +259,12 @@ bool InnovusionComponent::Init() {
   // choose model
   if (std::regex_match(lidar_model, std::regex("rev_[i,f,b,r,k].*"))) {
     AWARN << "Init InnovusionDriverFalcon";
-    driver_.reset(new DriverFalcon(data_callback_s_, this, status_callback_s_));
+    if (imu_writer_)
+      driver_.reset(
+          new DriverFalcon(data_callback_s_, this, status_callback_s_));
+    else
+      driver_.reset(new DriverFalcon(data_callback_s_, this));
+
   } else if (std::regex_match(lidar_model, std::regex("rev_[g,e,h].*"))) {
     AWARN << "Init InnovusionDriverJaguar";
     driver_.reset(new DriverJaguar(data_callback_s_, this));

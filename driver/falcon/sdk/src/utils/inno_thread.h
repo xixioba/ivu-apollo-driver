@@ -13,7 +13,7 @@
 #include <stdint.h>
 #include <time.h>
 
-#if defined(_QNX_) || defined (__MINGW64__)
+#if defined(_QNX_) || defined(__MINGW64__) || defined(__APPLE__)
 struct cpu_set_t;
 #endif
 
@@ -32,6 +32,7 @@ class InnoThread {
   bool has_shutdown() const {
     return shutdown_;
   }
+  void timed_wait(uint32_t useconds);
 
  private:
   static void *inno_thread_func_(void *context);
@@ -47,8 +48,16 @@ class InnoThread {
   const cpu_set_t *cpuset_;
   pthread_mutex_t mutex_;
   pthread_cond_t cond_;
+  pthread_condattr_t condattr_;
   bool shutdown_;
   size_t start_time_;
+  clockid_t clockid_{
+#ifdef __APPLE__
+    CLOCK_REALTIME
+#else
+    CLOCK_MONOTONIC
+#endif
+  };
 };
 }  // namespace innovusion
 

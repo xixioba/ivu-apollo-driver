@@ -13,18 +13,31 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 #ifdef __MINGW64__
 // #  define PRI_SIZEU "I64u"
 // #  define PRI_SIZED "I64d"
 #  define PRI_SIZEU "I64u"
 #  define PRI_SIZED "I64d"
+#  define PRI_SIZELD "I64d"
 #  define PRI_SIZEX "I64x"
-#  define PRI_SIZELU "llu"
+#  define PRI_SIZELX "I64x"
+#  define PRI_SIZELU "I64u"
+#elif defined(__APPLE__)
+
+#  define PRI_SIZEU "llu"
+#  define PRI_SIZED "lld"
+#  define PRI_SIZELD "ld"
+#  define PRI_SIZEX "llx"
+#  define PRI_SIZELX "lx"
+#  define PRI_SIZELU "lu"
 #else
 #  define PRI_SIZEU "zu"
 #  define PRI_SIZED "zd"
+#  define PRI_SIZELD "ld"
 #  define PRI_SIZEX "zx"
+#  define PRI_SIZELX "lx"
 #  define PRI_SIZELU "lu"
 #endif
 
@@ -62,9 +75,10 @@ extern "C" {
   extern const char *inno_log_header_g[];
 
   void inno_log_print(enum InnoLogLevel,
+                      bool discardable,
                       const char *file, int line,
                       const char *fmt, ...)
-      __attribute__((format(printf, 4, 5)));
+      __attribute__((format(printf, 5, 6)));
 
   void inno_fprintf(int fd,
                     const char *fmt, ...)
@@ -230,13 +244,19 @@ struct cpu_set_t;
 
 #define inno_log_with_level(_level, ...)                 \
   do {                                                   \
-    inno_log_print(_level, __FILE__,                     \
+    inno_log_print(_level, true, __FILE__,               \
                    __LINE__, __VA_ARGS__);               \
   } while (0)
 
-#define inno_log_3th_program(_level, from, ...)      \
-  do {                                               \
-    inno_log_print(_level, from, 7999, __VA_ARGS__); \
+#define inno_log_with_level_no_discard(_level, ...)      \
+  do {                                                   \
+    inno_log_print(_level, false, __FILE__,              \
+                   __LINE__, __VA_ARGS__);               \
+  } while (0)
+
+#define inno_log_3th_program(_level, from, ...)            \
+  do {                                                     \
+    inno_log_print(_level, true, from, 7999, __VA_ARGS__); \
   } while (0)
 
 #endif  // UTILS_INNO_LIDAR_LOG_H_

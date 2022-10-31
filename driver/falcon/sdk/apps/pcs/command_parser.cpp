@@ -77,6 +77,7 @@ CommandParser::CommandParser(int argc, char *argv[])
   // add a initial value "0.0.0.0" for udp_client_ip parameter
   udp_client_ip = kInvalidIpAddress;
   udp_port_data = kDefaultUdpPort_;
+  udp_port_cali_data = kDefaultCaliDataUdpPort_;
   udp_port_status = kDefaultUdpPort_;
   udp_port_raw = 0;
   udp_port_status_local = 0;
@@ -191,6 +192,7 @@ void CommandParser::parse_parameter_(int argc, char *argv[]) {
     {"lidar-id", required_argument, 0, 'i'},
     {"udp-ip", required_argument, 0, 'u'},
     {"udp-port", required_argument, 0, 'U'},
+    {"udp-port-cali-data", required_argument, 0, 'Q'},
     {"udp-port-status", required_argument, 0, 'W'},
     {"udp-port-message", required_argument, 0, 'w'},
     {"udp-port-raw", required_argument, 0, 'k'},
@@ -223,10 +225,12 @@ void CommandParser::parse_parameter_(int argc, char *argv[]) {
     {"test-command-interval-ms", required_argument, 0, 'X'},
     {"sleep", required_argument, 0, 'E'},
     {"help", no_argument, NULL, 'h'},
+    {"frame-sync-enable", required_argument, 0, 'z'},
+    {"frame-sync-target-time", required_argument, 0, 'Z'},
     {0, 0, 0, 0}
   };
-  const char *optstring = "a:b:cd:e:f:g:hi:j:k:l:m:n:o:p:qr:s:t:u:vw:x:y:"
-                          "A:B:C:D:E:F:G:H:I:J:K:L:M:N:O:P:R:S:T:U:VW:X:Y";
+  const char *optstring = "a:b:cd:e:f:g:hi:j:k:l:m:n:o:p:qr:s:t:u:vw:x:y:z:"
+                          "A:B:C:D:E:F:G:H:I:J:K:L:M:N:O:P:Q:R:S:T:U:VW:X:Y:Z";
   while (1) {
     int option_index = 0;
     c = getopt_long(argc, argv, optstring, long_options, &option_index);
@@ -262,6 +266,10 @@ void CommandParser::parse_parameter_(int argc, char *argv[]) {
 
       case 'O':
         lidar.lidar_udp_port = strtoul(optarg, NULL, 0);
+        break;
+
+      case 'Q':
+        udp_port_cali_data = strtoul(optarg, NULL, 0);
         break;
 
       case 'T':
@@ -453,6 +461,14 @@ void CommandParser::parse_parameter_(int argc, char *argv[]) {
         test_command_send_interval_ms = optarg;
         break;
 
+      case 'z':
+        frame_sync_enable = strtoul(optarg, nullptr, 0);
+        break;
+
+      case 'Z':
+        frame_sync_target_time = optarg;
+        break;
+
       case '?':
         abort();
 
@@ -468,7 +484,11 @@ void CommandParser::parse_parameter_(int argc, char *argv[]) {
   }
 
   if ((!lidar.processed) &&
-      InnoUtils::ends_with(argv[0], "client")) {
+      (InnoUtils::ends_with(argv[0], "client") ||
+       InnoUtils::ends_with(argv[0], "client.exe") ||
+       InnoUtils::ends_with(argv[0], "client_debug.exe") ||
+       InnoUtils::ends_with(argv[0], "client_dynamic") ||
+       InnoUtils::ends_with(argv[0], "client_debug"))) {
     inno_log_info("force processed mode");
     lidar.processed = 1;
   }

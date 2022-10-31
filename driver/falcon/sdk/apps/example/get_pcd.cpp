@@ -6,6 +6,7 @@
  *  $Id$
  */
 
+#include <sys/time.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <stdio.h>
@@ -13,6 +14,8 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <iostream>
+#include <fstream>
 
 #include <limits>
 #include <string>
@@ -78,7 +81,6 @@ class FileRecorder {
                         bool reflectance,
                         enum FileType file_type)
       : filename_(filename)
-      , frame_id_(frame_id)
       , fd_(-1)
       , point_count_(0)
       , reflectance_(reflectance)
@@ -109,7 +111,7 @@ class FileRecorder {
                                              O_WRONLY | O_CREAT | O_TRUNC,
                                              0644);
       inno_log_verify(fd_ >= 0, "cannot open %s", filename_.c_str());
-      inno_log_info("open file %s to record frame %" PRI_SIZEU "",
+      inno_log_info("open file %s to record frame %" PRI_SIZEU,
                     filename_.c_str(), frame_id);
       write_dummy_header_();
     }
@@ -396,7 +398,7 @@ class FileRecorder {
     }
 
     inno_log_verify(r < int32_t(sizeof(header_buffer_)),
-                    "buffer too small %d vs %" PRI_SIZEU "",
+                    "buffer too small %d vs %" PRI_SIZELU,
                     r, sizeof(header_buffer_));
     inno_log_info("write %" PRI_SIZEU " points to pcd file %s",
                   point_count_,
@@ -407,11 +409,11 @@ class FileRecorder {
     fseek(file, 0, SEEK_SET);
     size_t write_size = strlen(header_buffer_);
     inno_log_verify(write_size <= max_write_size,
-                    "write_size %" PRI_SIZEU " > header_size %u",
+                    "write_size %" PRI_SIZELU " > header_size %u",
                     write_size, max_write_size);
     size_t fr = fwrite(header_buffer_, 1, write_size, file);
     inno_log_verify(fr == strlen(header_buffer_),
-                    "fwrite return %" PRI_SIZEU "", fr);
+                    "fwrite return %" PRI_SIZELU "", fr);
     fclose(file);
     return;
   }
@@ -453,7 +455,7 @@ class FileRecorder {
 
  private:
   std::string filename_;
-  uint64_t frame_id_;
+  // uint64_t frame_id_;
   int fd_;
   uint64_t point_count_;
   bool reflectance_;
@@ -477,6 +479,7 @@ class ExampleProcessor {
                    const int64_t frame_number,
                    const int64_t file_number,
                    int use_xyz_point,
+                   std::string latency_file,
                    int ascii_pcd,
                    int extract_message)
       : filename_(filename)
@@ -484,6 +487,7 @@ class ExampleProcessor {
       , frame_number_(frame_number)
       , file_number_(file_number)
       , use_xyz_point_(use_xyz_point)
+      , latency_file_(latency_file)
       , current_frame_(-1)
       , frame_so_far_(-1)
       , file_so_far_(0)
@@ -716,10 +720,10 @@ class ExampleProcessor {
 
       int ret = InnoDataPacketUtils::printf_status_packet(*pkt, buf, buf_size);
       if (ret > 0) {
-        inno_log_info("Received status packet #%" PRI_SIZEU ": %s", cnt, buf);
+        inno_log_info("Received status packet #%" PRI_SIZELU ": %s", cnt, buf);
       } else {
         inno_log_warning("Received status packet #"
-                         "%" PRI_SIZEU ": errorno: %d", cnt, ret);
+                         "%" PRI_SIZELU ": errorno: %d", cnt, ret);
       }
     }
 
@@ -727,11 +731,28 @@ class ExampleProcessor {
     return 0;
   }
 
+
+  static void get_latency_info(const InnoDataPacket &pkt,
+                               const std::string latency_file) {
+    int64_t latency = 0;
+    struct timeval tv{};
+    gettimeofday(&tv, nullptr);
+    int64_t cur_time = (int64_t) tv.tv_sec * 1000000 + tv.tv_usec;
+    latency = cur_time - pkt.common.ts_start_us;
+    std::fstream f;
+    f.open(latency_file, std::ios::out|std::ios::app);
+    f << "frame_idx=" << pkt.idx << "," << "latency=" <<
+      latency << "," << "ts_start_us=" << (int64_t) pkt.common.ts_start_us
+      << "," << "accept_time=" << cur_time << "," <<
+      "item_count=" << pkt.item_number << std::endl;
+    f.close();
+  }
+
   static int data_callback_s(const int lidar_handle, void *ctx,
                              const InnoDataPacket *pkt) {
     static size_t cnt = 0;
     if (cnt++ % 1000 == 0) {
-      inno_log_info("Received data packet #%" PRI_SIZEU "\n", cnt);
+      inno_log_info("Received data packet #%" PRI_SIZELU "\n", cnt);
     }
     inno_log_verify(pkt, "pkt");
 
@@ -806,6 +827,10 @@ class ExampleProcessor {
   }
 
   void process_data_(const InnoDataPacket &pkt) {
+    if (latency_file_ != "" && get_recorder_(pkt.idx, pkt.use_reflectance)) {
+        get_latency_info(pkt, latency_file_);
+    }
+
     // we have two ways of processing the data packet
     if (pkt.type == INNO_ITEM_TYPE_SPHERE_POINTCLOUD) {
       if (use_xyz_point_ == 0 ||
@@ -966,6 +991,7 @@ class ExampleProcessor {
   int64_t frame_number_;
   int64_t file_number_;
   int use_xyz_point_;
+  std::string latency_file_;
   int64_t current_frame_;
   int64_t frame_so_far_;
   int file_so_far_;
@@ -1067,6 +1093,7 @@ int main(int argc, char **argv) {
   int64_t frame_number = 1;
   int64_t file_number = 1;
   int use_xyz_point = 1;
+  std::string latency_file = "";
   int extract_message = 0;
   int use_tcp = 0;
   int ascii_pcd = 0;
@@ -1099,10 +1126,11 @@ int main(int argc, char **argv) {
     {"extract-message", no_argument, &extract_message, 1},
     {"use-tcp", no_argument, &use_tcp, 1},
     {"ascii-pcd", no_argument, &ascii_pcd, 1},
+    {"latency-file", required_argument, 0, 'l'},
     {"help", no_argument, NULL, 'h'},
     {0, 0, 0, 0}
   };
-  const char *optstring = "ac:e:f:F:hn:m:M:N:O:p:P:s:x:g";
+  const char *optstring = "ac:e:f:F:hn:l:m:M:N:O:p:P:s:x:g";
   while (1) {
     int option_index = 0;
     c = getopt_long(argc, argv, optstring, long_options, &option_index);
@@ -1214,6 +1242,10 @@ int main(int argc, char **argv) {
         use_xyz_point = atoi(optarg);
         break;
 
+      case 'l':
+        latency_file = optarg;
+        break;
+
       case 'g':
         simulation_galvo_check = atoi(optarg);
         break;
@@ -1237,7 +1269,7 @@ int main(int argc, char **argv) {
    ***********************/
   ExampleProcessor processor(filename, frame_start,
                              frame_number, file_number,
-                             use_xyz_point, ascii_pcd,
+                             use_xyz_point, latency_file, ascii_pcd,
                              extract_message);
 
   /***********************

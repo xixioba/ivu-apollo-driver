@@ -105,6 +105,34 @@ extern "C" {
     InnoCaliData cali_data[0];
   };
 
+  DEFINE_INNO_COMPACT_STRUCT(InnoCaliDataPoint) {
+    int16_t h_angle;
+    int16_t v_angle;
+
+    uint8_t channel: 2;
+    uint8_t facet: 3;
+    uint8_t reserved_flag: 3;
+
+    int16_t poly_angle;
+    int16_t galvo_angle;
+
+    uint16_t ref_intensity;
+    uint32_t radius;
+    uint32_t intensity;
+
+    float reflectance;
+  };
+
+  DEFINE_INNO_COMPACT_STRUCT(InnoCaliDataPacket) {
+    uint16_t frame_id;
+    uint16_t sub_id;
+    uint8_t is_last_sub_frame : 1;
+    uint8_t reserved : 7;
+    uint16_t item_count;
+    uint32_t checksum;
+    InnoCaliDataPoint points[0];
+  };
+
   class InnoBlockAngles {
    public:
     int16_t h_angle;

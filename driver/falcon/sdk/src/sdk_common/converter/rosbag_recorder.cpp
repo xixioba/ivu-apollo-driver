@@ -77,8 +77,8 @@ RosbagRecorder::~RosbagRecorder() {
 void RosbagRecorder::close_file_() {
   if (file_.is_open()) {
     if (filename_.size()) {
-      inno_log_info("write %" PRI_SIZEU
-                    " frames, %" PRI_SIZEU
+      inno_log_info("write %" PRI_SIZELU
+                    " frames, %" PRI_SIZELU
                     " points, %" PRI_SIZEU
                     " bytes to %s",
                     total_frame_, total_points_,
@@ -92,7 +92,7 @@ void RosbagRecorder::close_file_() {
 int RosbagRecorder::flush_buffer_() {
   int result = RERCORDER_SUCCESS;
   inno_log_verify(buffer_write_cursor_ <= kBagBufferSize,
-                  "buffer overflow %" PRI_SIZEU "",
+                  "buffer overflow %" PRI_SIZELU,
                   buffer_write_cursor_);
   write_file_size_ += buffer_write_cursor_;
   if (buffer_write_cursor_ == 0) {
@@ -166,7 +166,7 @@ int RosbagRecorder::add_block(const InnoDataPacket *pkt) {
     packet_offset_ts_us_ = pkt->common.ts_start_us - last_packet_ts_us_;
   }
   last_time_ns_ = time_ns_;
-  inno_log_trace("offset=%" PRI_SIZED " ts=%f",
+  inno_log_trace("offset=%" PRI_SIZED " ts=%lf",
                  packet_offset_ts_us_ / 1000000,
                  pkt->common.ts_start_us / 1000000);
 
@@ -192,8 +192,8 @@ int RosbagRecorder::add_block(const InnoDataPacket *pkt) {
     if (result > 0) {
       return result;
     }
-    inno_log_info("capture %u points in frame-%" PRI_SIZEU
-                  "-%" PRI_SIZEU "",
+    inno_log_info("capture %u points in frame-%" PRI_SIZELU
+                  "-%" PRI_SIZELU,
                   current_point_in_frame_,
                   total_frame_, last_frame_id_);
 
@@ -338,8 +338,8 @@ int RosbagRecorder::start_writing_chunk_(const InnoDataPacket *cframe) {
                 (chunk_count_ + 1) * sizeof(ChunkInfoHeader);
   if (size_limit_ > 0) {
     if (total_size_ > size_limit_) {
-      inno_log_trace("reach size limit %" PRI_SIZED
-                     " %" PRI_SIZEU " %u %u %u %" PRI_SIZED "",
+      inno_log_trace("reach size limit %" PRI_SIZELD
+                     " %" PRI_SIZEU " %u %u %u %" PRI_SIZELD,
                      total_size_, write_file_size_,
                      message_data_row_step_positon_,
                      chunk_data_len_position_,

@@ -14,8 +14,10 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
-#ifndef __MINGW64__
+#if !(defined(_QNX_) || defined (__MINGW64__))
+#ifndef __APPLE__
 #include <syscall.h>
+#endif
 #include <sys/uio.h>
 #endif
 #include <sys/stat.h>
@@ -331,6 +333,7 @@ int InnoLog::log_printv(int fd, const logContextInfo &info) {
  * @param valist  - values
  */
 int InnoLog::log_v(enum InnoLogLevel level,
+                   bool discardable,
                    const char *file, int line,
                    const char *fmt,
                    va_list valist) {
@@ -369,7 +372,7 @@ int InnoLog::log_v(enum InnoLogLevel level,
 
   // get head2
   uint32_t tid = 0;
-#ifndef __MINGW64__
+#if !(defined(_QNX_) ||defined(__MINGW64__) || defined(__APPLE__))
   tid = syscall(SYS_gettid);
 #endif
   static const int kMaxHeaderSize = 100;
@@ -431,7 +434,7 @@ int InnoLog::log_v(enum InnoLogLevel level,
   if ((asynclog_exist_ == true) &&\
       (asynclog_manager_p_ != NULL) &&\
       (true != asynclog_manager_p_->is_log_worker())) {
-    asynclog_manager_p_->add_log_job(logInfo);
+    asynclog_manager_p_->add_log_job(logInfo, discardable);
     pthread_rwlock_unlock(&asynclog_lock_);
   } else {
     pthread_rwlock_unlock(&asynclog_lock_);
@@ -653,18 +656,24 @@ void InnoLog::setup_sig_handler() {
   }
 
   inno_log_info("setup_sig_handler ready");
+#else
+  signal(SIGINT, [](int code) {
+    exit(EXIT_FAILURE);
+  });
 #endif
 }
 
 }  // namespace innovusion
 
 void inno_log_print(enum InnoLogLevel level,
+                    bool discardable,
                     const char *file, int line,
                     const char *fmt, ...) {
   va_list valist;
   va_start(valist, fmt);
-  innovusion::InnoLog::get_instance().
-                        log_v(level, file, line, fmt, valist);
+  innovusion::InnoLog::get_instance().\
+                       log_v(level, discardable,
+                             file, line, fmt, valist);
   va_end(valist);
   return;
 }

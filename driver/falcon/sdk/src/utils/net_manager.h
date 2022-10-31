@@ -32,7 +32,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#if !(defined(_QNX_) || defined(__MINGW64__))
+#if !(defined(_QNX_) || defined(__MINGW64__) || defined(__APPLE__))
   #include <sys/sendfile.h>
 #endif
 

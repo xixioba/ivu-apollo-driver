@@ -11,6 +11,7 @@
 
 #include <functional>
 #include <vector>
+#include <cstdint>
 
 namespace innovusion {
 //
@@ -34,8 +35,8 @@ class RangeImage {
   bool is_dense = true;
 
  public:
-  std::int32_t width = 0;
-  std::int32_t height = 0;
+  int32_t width = 0;
+  int32_t height = 0;
 
  public:
   RangeImage(float angular_resolution_x, float angular_resolution_y,

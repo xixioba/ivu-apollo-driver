@@ -1,8 +1,7 @@
 #pragma once
 
-#include "httplib.h"
-
 #include "cyber/cyber.h"
+#include "httplib.h"
 
 namespace apollo {
 namespace drivers {

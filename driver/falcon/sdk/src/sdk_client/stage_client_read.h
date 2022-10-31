@@ -32,7 +32,7 @@ class StageClientReadConfig: public Config {
     test = 0;
   }
 
-  virtual const char* get_type() const {
+  const char* get_type() const override {
     return "LidarClient_StageClientRead";
   }
 
@@ -143,4 +143,3 @@ class StageClientRead {
 }  // namespace innovusion
 
 #endif  // SDK_CLIENT_STAGE_CLIENT_READ_H_
-

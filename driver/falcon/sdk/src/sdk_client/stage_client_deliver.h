@@ -17,7 +17,7 @@
 #include "sdk_common/inno_lidar_packet.h"
 #include "sdk_client/lidar_fault_check.h"
 
-class InnoCommonHeader;
+struct InnoCommonHeader;
 
 namespace innovusion {
 class InnoLidarClient;
@@ -27,7 +27,7 @@ class StageClientDeliverConfig: public Config {
   StageClientDeliverConfig() : Config() {
   }
 
-  virtual const char* get_type() const {
+  const char* get_type() const override {
     return "LidarClient_StageClientDeliver";
   }
 
@@ -105,4 +105,3 @@ class StageClientDeliver {
 }  // namespace innovusion
 
 #endif  // SDK_CLIENT_STAGE_CLIENT_DELIVER_H_
-

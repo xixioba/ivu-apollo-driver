@@ -155,7 +155,7 @@ int ServerWsProcessor::write_chunk_to_ws_socket_full_s(
   int total = 0;
   char chunk[100];
 
-  snprintf(chunk, sizeof(chunk), "%lx\r\n", input_len);
+  snprintf(chunk, sizeof(chunk), "%" PRI_SIZELX "\r\n", input_len);
   int ret = ServerWs::write_buffer_to_ws_socket_full_s(
       get_ws_connection(conn),
       chunk, strlen(chunk));

@@ -60,9 +60,11 @@ class LidarSource {
   }
 
   bool is_live_direct_memory();
+  bool is_live_lidar();
   bool is_raw_mem() {
     return protocol_ == INNO_LIDAR_PROTOCOL_RAW_MEM;
   }
+  bool is_pc_server();
 
  private:
   void init_();

@@ -1,12 +1,10 @@
 #pragma once
 
-#include "driver_factory.h"
-
-#include "modules/drivers/lidar/innovusion/proto/innovusion.pb.h"
-#include "modules/drivers/lidar/innovusion/proto/innovusion_imu.pb.h"
-#include "modules/drivers/lidar/innovusion/proto/innovusion_config.pb.h"
-
 #include "cyber/cyber.h"
+#include "driver_factory.h"
+#include "modules/drivers/lidar/innovusion/proto/innovusion.pb.h"
+#include "modules/drivers/lidar/innovusion/proto/innovusion_config.pb.h"
+#include "modules/drivers/lidar/innovusion/proto/innovusion_imu.pb.h"
 
 namespace apollo {
 namespace drivers {
@@ -16,11 +14,11 @@ using apollo::cyber::Component;
 using apollo::cyber::ComponentBase;
 using apollo::cyber::Reader;
 using apollo::cyber::Writer;
+using apollo::drivers::innovusion::Imu;
 using apollo::drivers::innovusion::PointCloud;
 using apollo::drivers::innovusion::PointHVRIT;
 using apollo::drivers::innovusion::PointXYZIT;
 using apollo::drivers::innovusion::ScanCloud;
-using apollo::drivers::innovusion::Imu;
 
 class InnovusionComponent : public apollo::cyber::Component<> {
  public:
@@ -36,7 +34,8 @@ class InnovusionComponent : public apollo::cyber::Component<> {
   int data_callback_(void *cframe);
 
   // static callback wrapper, called by the driver_
-  static int status_callback_s_(int lidar_handle, void *ctx, std::string status) {
+  static int status_callback_s_(int lidar_handle, void *ctx,
+                                std::string status) {
     return (reinterpret_cast<InnovusionComponent *>(ctx))
         ->status_callback_(status);
   }
@@ -50,7 +49,7 @@ class InnovusionComponent : public apollo::cyber::Component<> {
   std::shared_ptr<Writer<ScanCloud>> scan_writer_ = nullptr;
   std::shared_ptr<Writer<PointCloud>> pointcloud_writer_ = nullptr;
   std::shared_ptr<Writer<Imu>> imu_writer_ = nullptr;
-  
+
   std::shared_ptr<PointCloud> point_cloud_ptr_ = nullptr;
   std::shared_ptr<ScanCloud> scan_cloud_ptr_ = nullptr;
   std::shared_ptr<Imu> imu_ptr_ = nullptr;

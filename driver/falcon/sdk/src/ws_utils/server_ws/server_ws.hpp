@@ -629,6 +629,9 @@ class SocketServerBase {
     /// Set to false to avoid binding the socket to
     // an address that is already in use. Defaults to true.
     bool reuse_address = true;
+    /// adjust the normal buffer sizes allocated for input buffer
+    // default set to 128K
+    std::size_t send_buffer_size = 128 * 1024;
   };  // Config
   /// Set before calling start().
   Config config;
@@ -687,6 +690,7 @@ class SocketServerBase {
     }
     acceptor_->open(endpoint.protocol());
     acceptor_->set_option(asio::socket_base::reuse_address(config.reuse_address));
+    acceptor_->set_option(asio::socket_base::send_buffer_size(config.send_buffer_size));
     acceptor_->bind(endpoint);
 
     after_bind_();
@@ -738,7 +742,8 @@ class SocketServerBase {
   /// Stop accepting new connections, and close current connections
   void stop() noexcept {
     while (!acceptor_) {
-      sleep(0.01);
+      //! TODO: Is this just a trick? No need to actually sleep for 10ms?
+      std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     if (acceptor_) {
       error_code ec;
@@ -814,6 +819,19 @@ class SocketServerBase {
   explicit SocketServerBase(uint16_t port) noexcept
       : config(port)
       , handler_runner_(new ScopeRunner()) {
+    //  BOOST_VERSION % 100 is the patch level
+    //  BOOST_VERSION / 100 % 1000 is the minor version
+    //  BOOST_VERSION / 100000 is the major version
+    int patch_lv = BOOST_VERSION % 100;
+    int minor_version = BOOST_VERSION / 100 % 1000;
+    int major_version = BOOST_VERSION / 100000;
+    std::string version;
+    version += std::to_string(major_version);
+    version += ".";
+    version += std::to_string(minor_version);
+    version += ".";
+    version += std::to_string(patch_lv);
+    inno_log_info("current boost version: %s", version.c_str());
   }
 
   virtual void after_bind_() {
@@ -953,7 +971,8 @@ class SocketServerBase {
               [this, connection, write_buffer, &regex_endpoint]
               (const error_code &ec, std::size_t /*bytes_transferred*/) {
                 connection->cancel_timeout_();
-                const char* err_msg = ec.message().c_str();
+                auto ec_msg = ec.message();
+                const char* err_msg = ec_msg.c_str();
                 auto lock = connection->handler_runner_->continue_lock();
                 if (!lock) {
                   return;
@@ -1041,7 +1060,8 @@ class SocketServerBase {
                       read_message_content_(connection, length,
                                             endpoint, fin_rsv_opcode);
                     } else {
-                      const char* err_msg = ec.message().c_str();
+                      auto ec_msg = ec.message();
+                      const char* err_msg = ec_msg.c_str();
                       connection_error_(connection, endpoint, err_msg);
                     }
                   });
@@ -1075,7 +1095,8 @@ class SocketServerBase {
                       read_message_content_(connection, length,
                                             endpoint, fin_rsv_opcode);
                     } else {
-                      const char* err_msg = ec.message().c_str();
+                      auto ec_msg = ec.message();
+                      const char* err_msg = ec_msg.c_str();
                       connection_error_(connection, endpoint, err_msg);
                     }
                   });
@@ -1086,7 +1107,8 @@ class SocketServerBase {
           } else if (ec == boost::asio::error::operation_aborted) {
             // do nothing for cancel operation
           } else {
-            const char* err_msg = ec.message().c_str();
+            auto ec_msg = ec.message();
+            const char* err_msg = ec_msg.c_str();
             connection_error_(connection, endpoint, err_msg);
           }
         });
@@ -1207,7 +1229,8 @@ class SocketServerBase {
               this->read_message_(connection, endpoint);
             }
           } else {
-            const char* err_msg = ec.message().c_str();
+            auto ec_msg = ec.message();
+            const char* err_msg = ec_msg.c_str();
             this->connection_error_(connection, endpoint, err_msg);
           }
         });

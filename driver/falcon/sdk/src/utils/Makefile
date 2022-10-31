@@ -1,7 +1,11 @@
 include version_gen.mk
 
 STATIC_LIB = libinnolidarutils.a
+ifeq ($(ARCH_TAG), -mingw64)
+DYNA_LIB = libinnolidarutils.dll
+else
 DYNA_LIB = libinnolidarutils.so
+endif
 
 SRC_DIR = ../../src/utils
 OBJ_DIR = ../../obj/utils
@@ -17,7 +21,7 @@ LINKFLAGS ?= -pthread -Wl,-Bstatic -static
 LINKFLAGS_DYNA ?= -pthread
 AR ?= ar
 OBJCOPY ?= objcopy
-INC ?= -I./
+INC += -I./ -I ..
 OTHER_CFLAGS ?= -fPIC
 UNITESTFLAGS ?=
 CFLAGS += $(INC) $(OTHER_CFLAGS) $(UNITESTFLAGS)
@@ -29,7 +33,14 @@ ifeq ($(ARCH_TAG), -arm)
 	MTUNE_VALUE ?= cortex-a53
 	CFLAGS += -march=$(MARCH_VALUE) -mtune=$(MTUNE_VALUE) -DARCH_ARM64
 else
+ifeq (,$(filter $(ARCH_TAG), -macos -qnx))
 	CFLAGS += -msse4.2
+endif
+endif
+
+ifeq ($(ARCH_TAG), -macos)
+	CFLAGS += -Wno-error=unused-private-field -Wno-error=gnu-inline-cpp-without-extern -Wno-error=unused-command-line-argument -Wno-error=format
+	INNO_LIB_BUILD_CFLAG += -lc++
 endif
 
 SRCS := $(wildcard $(SRC_DIR)/*.cpp)
@@ -53,19 +64,31 @@ $(DEP_DIR) :
 
 $(OUT_DIR)/$(STATIC_LIB):: $(OUT_DIR)
 $(OUT_DIR)/$(STATIC_LIB):: $(OBJS)
+ifeq ($(ARCH_TAG), -macos)
+	$(AR) -r $@- $^
+else
 	$(AR) -r -o $@- $^
+endif
 	$(OBJCOPY) $(OBJCOPY_OPT) $@- $@
 	rm -f $@-
 
 $(OUT_DIR)/$(DYNA_LIB):: $(OUT_DIR)
 $(OUT_DIR)/$(DYNA_LIB):: $(OBJS)
-	$(CC) -shared -Wl,-soname,$(DYNA_LIB).$(DYNA_LIB_MAJ) -o $@- $^ $(INNO_LIB_BUILD_CFLAG) $(OTHER_LIB_BUILD_CFLAG) 
+ifeq ($(ARCH_TAG), -mingw64)
+	$(CC) -shared -Wl,-soname,$(DYNA_LIB) -o $@ $^ $(INNO_LIB_BUILD_CFLAG) $(OTHER_LIB_BUILD_CFLAG)
+else
+ifeq ($(ARCH_TAG), -macos)
+	$(CC) -shared -Wl,-install_name,$(DYNA_LIB).$(DYNA_LIB_MAJ) -o $@- $^ $(INNO_LIB_BUILD_CFLAG) $(OTHER_LIB_BUILD_CFLAG)
+else
+	$(CC) -shared -Wl,-soname,$(DYNA_LIB).$(DYNA_LIB_MAJ) -o $@- $^ $(INNO_LIB_BUILD_CFLAG) $(OTHER_LIB_BUILD_CFLAG)
+endif
 	$(OBJCOPY) $(OBJCOPY_OPT) $(OBJCOPY_OPT_DYNA) $@- $@.$(DYNA_LIB_MAJ).$(DYNA_LIB_MIN).$(DYNA_LIB_BUILD)
 	rm -f $@-
 	rm -f $(OUT_DIR)/$(DYNA_LIB).$(DYNA_LIB_MAJ) $(OUT_DIR)/$(DYNA_LIB)
 	ln -s $(DYNA_LIB).$(DYNA_LIB_MAJ).$(DYNA_LIB_MIN).$(DYNA_LIB_BUILD) $(OUT_DIR)/$(DYNA_LIB).$(DYNA_LIB_MAJ)
 	ln -s $(DYNA_LIB).$(DYNA_LIB_MAJ) $(OUT_DIR)/$(DYNA_LIB)
-	cd -
+	-cd -
+endif
 
 $(OBJ_DIR)/%.o:: %.cpp | $(OBJ_DIR) $(DEP_DIR)
 	$(CC) -c $(CFLAGS) $*.cpp -o $(OBJ_DIR)/$*.o
@@ -80,7 +103,7 @@ lint_checked: $(wildcard *.h) $(wildcard *.cpp)
 
 clean:
 	rm -fr lint_checked $(OBJ_DIR) $(DEP_DIR) $(OUT_DIR)/$(STATIC_LIB) $(OUT_DIR)/$(DYNA_LIB)*
-	@$(MAKE) -C unitest clean
+	-@$(MAKE) -C unitest clean
 
 .PHONY: test
 test:

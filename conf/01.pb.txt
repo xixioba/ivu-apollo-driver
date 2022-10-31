@@ -18,7 +18,7 @@ processed : 1
 
 pointcloud_channel : "innovusion/lidar/01/PointCloud2"
 scan_channel: "innovusion/lidar/01/ScanCloud"
-imu_channel: "innovusion/lidar/01/Imu"
+imu_channel: ""
 
 time_fix_err_ms : 0
 inno_log_level : 2

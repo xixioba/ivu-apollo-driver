@@ -9,7 +9,6 @@ namespace innovusion {
 
 bool DriverFalcon::init_() {
   inno_lidar_set_log_level((enum InnoLogLevel)inno_log_level);
-  cframe_converter_ = new (::innovusion::CframeConverter);
   enum InnoLidarProtocol protocol_;
   if (data_filename != "") {
     // setup read from file
@@ -20,7 +19,6 @@ bool DriverFalcon::init_() {
         processed ? INNO_LIDAR_PROTOCOL_PCS_FILE : INNO_LIDAR_PROTOCOL_RAW_FILE;
   } else {
     // setup read from live
-    const char *ip_str = lidar_ip.c_str();
     uint16_t udp_port = 0;
     if (lidar_udp_port > 0) {
       if (!processed) {
@@ -33,14 +31,14 @@ bool DriverFalcon::init_() {
       protocol_ = INNO_LIDAR_PROTOCOL_PCS_TCP;
     } else {
       if (lidar_ip == "local") {
-        ip_str = "127.0.0.1";
+        lidar_ip = "127.0.0.1";
         protocol_ = INNO_LIDAR_PROTOCOL_RAW_MEM;
       } else {
         protocol_ = INNO_LIDAR_PROTOCOL_RAW_TCP;
       }
     }
-    handle_ = inno_lidar_open_live(lidar_name.c_str(), ip_str, lidar_port,
-                                   protocol_, udp_port);
+    handle_ = inno_lidar_open_live(lidar_name.c_str(), lidar_ip.c_str(),
+                                   lidar_port, protocol_, udp_port);
   }
   if (handle_ > 0) {
     int ret = 0;

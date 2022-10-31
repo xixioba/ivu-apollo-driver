@@ -80,7 +80,7 @@ void InnoGalvoMirrorCheck::update_ext_ref(
   ++ref_idx_;
   inno_log_info("Galvo ext reference, rotation vector (%lf, %lf, %lf), " \
                   "delta position (%lf, %lf, %lf), " \
-                  "idx = %" PRI_SIZEU "",
+                  "idx = %" PRI_SIZEU,
                   input_vector_.x, input_vector_.y, input_vector_.z,
                   input_delta_.x, input_delta_.y, input_delta_.z,
                   ref_idx_);
@@ -230,7 +230,7 @@ InnoFrameCheckProcess InnoGalvoMirrorCheck::galvo_mirror_offset_check(
 
 /**
  * Start to collect ground points
- * 
+ *
  */
 int InnoGalvoMirrorCheck::collect_ground_points_(
                                   const InnoDataPacket &pkt,
@@ -968,7 +968,7 @@ int InnoMaxDistanceCheck::check_max_distance(
   double frame_refl = 0.0;
 
   int got = sscanf(buf, "%u,%u,%lf,%lf,%lf,%lf,"
-#ifdef __MINGW64__
+#if defined(__MINGW64__) || defined(__APPLE__)
                          "%llu,"
 #else
                          "%lu,"

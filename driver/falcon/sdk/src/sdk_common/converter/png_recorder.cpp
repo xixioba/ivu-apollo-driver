@@ -46,7 +46,7 @@ PngRecorder::PngRecorder(size_t job_duration, size_t max_pack_num,
   saved_packet_ =
       reinterpret_cast<InnoDataPacket *>(calloc(len_saved_, 1));
   inno_log_verify(saved_packet_,
-                  "cannot allocate saved_ %" PRI_SIZEU "",
+                  "cannot allocate saved_ %" PRI_SIZELU,
                   len_saved_);
   memset(saved_packet_, 0, len_saved_);
 
@@ -54,7 +54,7 @@ PngRecorder::PngRecorder(size_t job_duration, size_t max_pack_num,
   saved_packet_headers_ =
       reinterpret_cast<InnoDataPacket *>(calloc(header_len_saved, 1));
   inno_log_verify(saved_packet_headers_,
-                  "cannot allocate saved_header %" PRI_SIZEU "",
+                  "cannot allocate saved_header %" PRI_SIZELU,
                   header_len_saved);
   memset(saved_packet_headers_, 0, header_len_saved);
   if (!ignore_first_frame) {
@@ -96,7 +96,7 @@ void PngRecorder::switch_state_(const InnoDataPacket* pkt) {
   switch (this->state_) {
     case State::Invalid:
       if (is_first_subframe) {
-        inno_log_info("capture first frame %" PRI_SIZEU "",
+        inno_log_info("capture first frame %" PRI_SIZEU,
                       pkt->idx);
         start_capture_();
       }
@@ -131,7 +131,7 @@ void PngRecorder::switch_state_(const InnoDataPacket* pkt) {
 //
 //
 void PngRecorder::capture_packet_(const InnoDataPacket *pkt) {
-  inno_log_trace("capture frame %" PRI_SIZEU "",
+  inno_log_trace("capture frame %" PRI_SIZEU,
                  pkt->idx);
   if (packet_so_far_ >= max_pack_num_) {
     inno_log_warning("reach limit kMaxPacketNum %u", packet_so_far_);
@@ -142,7 +142,7 @@ void PngRecorder::capture_packet_(const InnoDataPacket *pkt) {
   uint32_t block_to_copy = pkt->item_number;
   if (block_to_copy > block_left) {
     block_to_copy = block_left;
-    inno_log_warning("reach limit kMaxBlockNum %" PRI_SIZEU "",
+    inno_log_warning("reach limit kMaxBlockNum %" PRI_SIZELU,
                      max_block_num_);
   }
 
@@ -190,7 +190,7 @@ void PngRecorder::save_point_to_image_(RangeImage* range_image) {
 
   for (size_t i = 0; i < block_so_far_; i++) {
     inno_log_verify(current_packet < packet_so_far_,
-                    "%" PRI_SIZEU " vs %u",
+                    "%" PRI_SIZELU " vs %u",
                     current_packet, packet_so_far_);
 
     block = &saved_packet_->inno_block2s[i];

@@ -180,6 +180,8 @@ friend class RawReceiver;
   InnoGalvoMirrorCheck *galvo_mirror_check_;
   // The ptr of max distance check
   InnoMaxDistanceCheck *max_distance_check_;
+
+  std::string frame_sync_time_{""};
 };
 
 }  // namespace innovusion

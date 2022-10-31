@@ -79,6 +79,7 @@ void StageClientRead::init_(InnoLidarClient *l) {
   use_mreq_ = false;
   filename_ = NULL;
   play_rate_ = 0;
+  play_rate_x_ = 0;
   max_file_rewind_ = 0;
   skip_ = 0;
   cannot_open_file_ = false;
@@ -572,10 +573,10 @@ int StageClientRead::keep_reading_fd_(int file_fd, bool is_file) {
     } else if (source_ == SOURCE_FILE) {
       if (r < 0) {
         inno_log_fatal("%s %s data is corrupted, "
-                       "ret=%d read_so_far=%" PRI_SIZEU " "
-                       "data_cnt=%" PRI_SIZEU
-                       " message_cnt=%" PRI_SIZEU
-                       " status_cnt=%" PRI_SIZEU "",
+                       "ret=%d read_so_far=%" PRI_SIZELU
+                       "data_cnt=%" PRI_SIZELU
+                       " message_cnt=%" PRI_SIZELU
+                       " status_cnt=%" PRI_SIZELU,
                        get_name_(), filename_, r, read_so_far,
                        data_cnt, message_cnt, status_cnt);
         ret = -1;
@@ -583,10 +584,10 @@ int StageClientRead::keep_reading_fd_(int file_fd, bool is_file) {
       } else {
         inno_log_verify(r == 0, "impossible %d", r);
         inno_log_info("%s reach end of %s, "
-                      "ret=%d read_so_far=%" PRI_SIZEU " "
-                      "data_cnt=%" PRI_SIZEU
-                      " message_cnt=%" PRI_SIZEU
-                      " status_cnt=%" PRI_SIZEU "",
+                      "ret=%d read_so_far=%" PRI_SIZELU
+                      "data_cnt=%" PRI_SIZELU
+                      " message_cnt=%" PRI_SIZELU
+                      " status_cnt=%" PRI_SIZELU,
                       get_name_(), filename_, r, read_so_far,
                       data_cnt, message_cnt, status_cnt);
         ret = -2;
@@ -596,10 +597,10 @@ int StageClientRead::keep_reading_fd_(int file_fd, bool is_file) {
       inno_log_verify(source_ == SOURCE_TCP,
                       "invalid source %d", source_);
       inno_log_warning("%s cannot read from connection, "
-                       "ret=%d read_so_far=%" PRI_SIZEU " "
-                       "data_cnt=%" PRI_SIZEU
-                       " message_cnt=%" PRI_SIZEU
-                       " status_cnt=%" PRI_SIZEU "",
+                       "ret=%d read_so_far=%" PRI_SIZELU
+                       "data_cnt=%" PRI_SIZELU
+                       " message_cnt=%" PRI_SIZELU
+                       " status_cnt=%" PRI_SIZELU,
                        get_name_(), r, read_so_far,
                        data_cnt, message_cnt, status_cnt);
       ret = -1;

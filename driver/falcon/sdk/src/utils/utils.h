@@ -18,6 +18,9 @@
 #ifdef __MINGW64__
 #include <ws2tcpip.h>
 #endif
+#if defined(_QNX_) || defined (__APPLE__)
+#include <sys/socket.h>
+#endif
 
 #include <string>
 #include <vector>
@@ -25,9 +28,10 @@
 #include <algorithm>
 
 #include "utils/log.h"
+#include "utils/types_consts.h"
 
 namespace innovusion {
-#ifdef __MINGW64__
+#if defined(_QNX_) || defined (__MINGW64__)
 #define CLOCK_MONOTONIC_RAW (CLOCK_REALTIME)
 #endif
 
@@ -45,7 +49,6 @@ const char* const kDefaultInterface = "eth0";
 class InnoUtils {
  private:
   static const char *white_space_;
-  static const uint64_t kNsInSecond = 1000000000L;
 
  public:
   static const uint32_t  kInnoCRC32ValueLen = 8;
@@ -188,7 +191,7 @@ class InnoUtils {
   static int close_fd(int fd);
 
   static inline uint64_t get_timestamp_ns(timespec spec) {
-    return spec.tv_sec * kNsInSecond + spec.tv_nsec;
+    return spec.tv_sec * InnoConsts::kNsInSecond + spec.tv_nsec;
   }
 
   static int list_file(const std::string &path,

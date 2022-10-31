@@ -9,7 +9,7 @@
 #ifndef UTILS_LOG_H_
 #define UTILS_LOG_H_
 
-#ifndef __MINGW64__
+#if !(defined(_QNX_) || defined (__MINGW64__))
 #include <execinfo.h>
 #endif
 
@@ -23,6 +23,17 @@
 #include <string>
 #include "utils/inno_lidar_log.h"
 #include "utils/consumer_producer.h"
+
+#ifdef __APPLE__
+#include <os/signpost.h>
+#define INNER_BEGIN_LOG(subsystem, category, name) \
+os_log_t m_log_##name = os_log_create((#subsystem), (#category));\
+os_signpost_id_t m_spid_##name = os_signpost_id_generate(m_log_##name);\
+os_signpost_interval_begin(m_log_##name, m_spid_##name, (#name));
+
+#define INNER_END_LOG(name) \
+os_signpost_interval_end(m_log_##name, m_spid_##name, (#name));
+#endif
 
 namespace innovusion {
 // define the format of log
@@ -130,6 +141,7 @@ class InnoLog {
    * @return int : 0 : succeed -1: failed
    */
   int log_v(enum InnoLogLevel level,
+            bool discardable,
             const char *file, int line,
             const char *fmt,
             va_list valist);

@@ -1,8 +1,7 @@
 #pragma once
 
-#include "sdk/src/sdk_common/converter/cframe_converter.h"
-
 #include "modules/drivers/lidar/innovusion/driver/driver_factory.h"
+#include "sdk/src/sdk_common/converter/cframe_converter.h"
 
 namespace apollo {
 namespace drivers {
@@ -13,7 +12,9 @@ class __attribute__((visibility("default"))) DriverFalcon
  public:
   DriverFalcon(InnoCframeCallBack data_callback, void *callback_context,
                InnoStatusCallBack status_callback = nullptr)
-      : DriverFactory(data_callback, callback_context, status_callback){};
+      : DriverFactory(data_callback, callback_context, status_callback) {
+    cframe_converter_ = new (::innovusion::CframeConverter);
+  };
 
   ~DriverFalcon() {
     stop();  // make sure that handle_ has been closed
@@ -34,8 +35,9 @@ class __attribute__((visibility("default"))) DriverFalcon
       std::unique_lock<std::mutex> lk(mtx);
       is_running_ = -2;  // file error, stop and exit
       cv.notify_all();
-    } else if (level <= INNO_MESSAGE_LEVEL_CRITICAL &&
-               code != INNO_MESSAGE_CODE_LIB_VERSION_MISMATCH) {
+    } else if ((level <= INNO_MESSAGE_LEVEL_CRITICAL &&
+                code != INNO_MESSAGE_CODE_LIB_VERSION_MISMATCH) ||
+               (code == INNO_MESSAGE_CODE_CANNOT_READ)) {
       std::unique_lock<std::mutex> lk(mtx);
       is_running_ = -1;  // live error, restart every second
       cv.notify_all();

@@ -16,6 +16,7 @@ message PointHVRIT {
   optional int32 flags = 7;
   optional int32 scan_id = 8;
   optional int32 scan_idx = 9;
+  optional uint32 elongation = 10;
 }
 
 message ScanCloud {
@@ -49,6 +50,7 @@ message PointXYZIT {
   optional int32 flags = 7;
   optional int32 scan_id = 8;
   optional int32 scan_idx = 9;
+  optional uint32 elongation = 10;
 }
 
 message PointCloud {

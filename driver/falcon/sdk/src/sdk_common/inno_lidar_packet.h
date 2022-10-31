@@ -115,7 +115,7 @@ enum InnoLidarInFault {
   INNO_LIDAR_IN_FAULT_CPULOAD_HIGH = 45,
   INNO_LIDAR_IN_FAULT_LATENCY_LONG = 46,
   INNO_LIDAR_IN_FAULT_DATA_DROP4 = 47,  // used for stage_signal force job drop
-  INNO_LIDAR_IN_FAULT_RESERVED08 = 48,
+  INNO_LIDAR_IN_FAULT_RAWDATA_TO = 48,
   INNO_LIDAR_IN_FAULT_EXCESSIVE_NOISE = 49,
   INNO_LIDAR_IN_FAULT_DATA_DROP1 = 50,
   INNO_LIDAR_IN_FAULT_DATA_DROP2 = 51,
@@ -127,7 +127,7 @@ enum InnoLidarInFault {
   INNO_LIDAR_IN_FAULT_GALVO_MIRROR = 57,
   INNO_LIDAR_IN_FAULT_MAX_DISTANCE = 58,
   INNO_LIDAR_IN_FAULT_GALVO_OFFSET = 59,
-  INNO_LIDAR_IN_FAULT_RESERVED15 = 60,
+  INNO_LIDAR_IN_FAULT_OPTIC2_F = 60,
   INNO_LIDAR_IN_FAULT_RESERVED16 = 61,
   INNO_LIDAR_IN_FAULT_RESERVED17 = 62,
   INNO_LIDAR_IN_FAULT_RESERVED18 = 63,
@@ -454,7 +454,8 @@ DEFINE_INNO_COMPACT_STRUCT(InnoDataPacket) {
   uint16_t is_last_sub_frame :1; /* 1: the last sub frame of a frame        */
   uint16_t is_last_sequence  :1; /* 1: the last piece of a sub frame        */
   uint16_t has_tail :1;          /* has additional tail struct after points */
-  uint16_t reserved_flag :6;     /* all 0 */
+  uint16_t frame_sync_locked :1; /* 1: frame sync has locked                */
+  uint16_t reserved_flag :5;     /* all 0 */
 
   /* 4 bytes */
   int16_t roi_h_angle;           /* configured ROI in InnoAngleUnit */
@@ -560,7 +561,8 @@ DEFINE_INNO_COMPACT_STRUCT(InnoStatusCounters) {
   uint16_t netstat_rx_err;
   uint16_t netstat_tx_err;
   uint16_t sys_cpu_percentage[4];
-  uint32_t reserved[19];
+  uint32_t lifelong_uptime;
+  uint32_t reserved[18];
 };
 
 /* 208 bytes InnoStatusSensorReadings */

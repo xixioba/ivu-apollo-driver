@@ -103,7 +103,7 @@ int PcServerWsProcessor::parse_and_exec_download_(void *conn) {
   std::string path = mp["path"];
   std::string offset = mp["offset"];
   std::string length = mp["length"];
-  inno_log_debug("type=%s path=%s offset=%s length=%s",
+  inno_log_info("type=%s path=%s offset=%s length=%s",
                  item.c_str(), path.c_str(), offset.c_str(), length.c_str());
   int ret = pcs_->send_file(item, path, offset, length, conn);
   return ret;

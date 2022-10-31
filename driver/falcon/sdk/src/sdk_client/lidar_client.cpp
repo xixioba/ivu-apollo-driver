@@ -186,7 +186,7 @@ bool InnoLidarClient::is_live_lidar_() const {
 }
 
 void *InnoLidarClient::alloc_buffer_(size_t size) {
-  inno_log_verify(size <= kMaxPacketSize, "%" PRI_SIZEU " too big", size);
+  inno_log_verify(size <= kMaxPacketSize, "%" PRI_SIZELU " too big", size);
   return packet_pool_->alloc();
 }
 
@@ -356,7 +356,7 @@ int InnoLidarClient::get_attribute(const char *attribute,
 int InnoLidarClient::get_attribute_string(const char *attribute,
                                           char *buf, size_t buf_size) {
   if (buf_size < 2) {
-    inno_log_warning("buf_size too small %" PRI_SIZEU "", buf_size);
+    inno_log_warning("buf_size too small %" PRI_SIZELU, buf_size);
     return -1;
   }
   // attributes start with server_ -- get from server
@@ -374,6 +374,19 @@ int InnoLidarClient::get_attribute_string(const char *attribute,
   if (strcmp(attribute, "is_live_direct_memory") == 0) {
     buf[0] = '0';
     buf[1] = '\0';
+    return 0;
+  } else if (strcmp(attribute, "is_pc_server") == 0) {
+    size_t ret = snprintf(buf, buf_size, "client");
+    if (ret >= buf_size) {
+      buf[buf_size - 1] = 0;
+    }
+    return 0;
+  } else if (strcmp(attribute, "is_live_lidar") == 0) {
+    size_t ret = snprintf(buf, buf_size,
+                          is_live_lidar_() ? "yes" : "no");
+    if (ret >= buf_size) {
+      buf[buf_size - 1] = 0;
+    }
     return 0;
   }
 
@@ -400,7 +413,7 @@ int InnoLidarClient::get_attribute_string(const char *attribute,
 int InnoLidarClient::set_faults_save_raw(uint64_t value) {
   faults_save_raw_ = value;
   if (is_live_lidar_()) {
-    inno_log_info("faults save raw: %" PRI_SIZEX "", value);
+    inno_log_info("faults save raw: %" PRI_SIZEU, value);
     return comm_->set_faults_save_raw(value);
   } else {
     inno_log_info("play file mode ignore setting faults save raw");
@@ -415,6 +428,9 @@ int InnoLidarClient::set_attribute_string(const char *attribute,
   // attributes start wih server_ -- send to server directly
   if (InnoUtils::start_with(attribute, SERVER_ATTR_PREFIX)) {
     if (is_live_lidar_()) {
+      if (strcmp(buf, "server_frame_sync") == 0) {
+        frame_sync_time_ = buf;
+      }
       return comm_->set_attribute_string(
           attribute + sizeof(SERVER_ATTR_PREFIX) - 1, buf);
     } else {
@@ -883,7 +899,7 @@ void InnoLidarClient::stats_update_packet_bytes(
 }
 
 /**
- * 1. Calculate the new normal vector after rotating 
+ * 1. Calculate the new normal vector after rotating
  *    the normal vector of fitting plane with rotation matrix.
  * 2. Calculate the included angle between new normal vector
  *    and the unit vector which normal to a horizontal plane.

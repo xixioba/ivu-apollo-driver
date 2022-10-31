@@ -12,10 +12,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 
-#ifndef __MINGW64__
+#if !(defined(_QNX_) || defined (__MINGW64__))
 #include <sys/syscall.h>
 #endif
+
 #include <sys/types.h>
 
 #include "utils/log.h"
@@ -38,9 +40,13 @@ InnoThread::InnoThread(const char *name, int priority,
   name_ = strdup(name);
   inno_log_verify(name_, "%s name", name);
   pthread_mutex_init(&mutex_, NULL);
-  pthread_cond_init(&cond_, NULL);
+  pthread_condattr_init(&condattr_);
+#ifndef __APPLE__
+  pthread_condattr_setclock(&condattr_, clockid_);
+#endif
+  pthread_cond_init(&cond_, &condattr_);
   threads_ = NULL;
-  start_time_ = InnoUtils::get_time_ns(CLOCK_MONOTONIC_RAW);
+  start_time_ = InnoUtils::get_time_ns(clockid_);
 }
 
 InnoThread::~InnoThread() {
@@ -54,8 +60,7 @@ InnoThread::~InnoThread() {
 
 void *InnoThread::inno_thread_func_(void *context) {
   InnoThread *cp = reinterpret_cast<InnoThread *>(context);
-
-#if !(defined(_QNX_) || defined (__MINGW64__))
+#if !(defined(_QNX_) || defined(__MINGW64__) || defined(__APPLE__))
   pid_t pid = 0;
   if (cp->cpuset_ && cp->cpusetsize_) {
     const pthread_t tid = pthread_self();
@@ -64,6 +69,8 @@ void *InnoThread::inno_thread_func_(void *context) {
   }
   pid = syscall(SYS_gettid);
 #else
+  (void)cp->cpuset_;
+  (void)cp->cpusetsize_;
   uint32_t pid = 0;
 #endif
 
@@ -101,6 +108,18 @@ void InnoThread::shutdown() {
   }
   free(threads_);
   threads_ = NULL;
+}
+
+/**
+ * Should ONLY be called by work thread itself.
+ * @param useconds
+ */
+void InnoThread::timed_wait(uint32_t useconds) {
+  timespec ts{};
+  uint64_t cur_us = InnoUtils::get_time_us(clockid_);
+  cur_us += useconds;
+  InnoUtils::us_to_timespec(cur_us, &ts);
+  pthread_cond_timedwait(&cond_, &mutex_, &ts);
 }
 
 }  // namespace innovusion

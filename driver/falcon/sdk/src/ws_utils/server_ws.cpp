@@ -19,6 +19,7 @@
 #include <mutex>   // NOLINT
 #include <string>
 
+#include "utils/utils.h"
 #include "utils/inno_lidar_log.h"
 
 namespace innovusion {

@@ -283,10 +283,6 @@ bool PNGChunk::save_IEND(const SaveFunc &saveFunc) {
 
 // filter type
 constexpr int FILTER_NONE = 0;
-constexpr int FILTER_SUB = 1;
-constexpr int FILTER_UP = 2;
-constexpr int FILTER_AVERAGE = 3;
-constexpr int FILTER_PAETH = 4;
 
 //
 constexpr int png_signature_size = 8;
@@ -329,7 +325,7 @@ bool PNGWriter::encode(int x, int y, unsigned char r, unsigned char g,
 //
 //
 bool PNGWriter::save(const SaveFunc &func) const {
-  inno_log_info("image_data_ size : %" PRI_SIZEU "",
+  inno_log_info("image_data_ size : %" PRI_SIZELU,
                 image_data_.size());
 
   //
@@ -350,7 +346,7 @@ bool PNGWriter::save(const SaveFunc &func) const {
 //
 //
 bool PNGWriter::saveto_buffer(std::vector<char>* buf) const {
-  inno_log_info("save begin -- buff size : %" PRI_SIZEU "",
+  inno_log_info("save begin -- buff size : %" PRI_SIZELU,
                 buf->size());
 
   // write signature
@@ -363,7 +359,7 @@ bool PNGWriter::saveto_buffer(std::vector<char>* buf) const {
 
   save(func);
 
-  inno_log_info("save end -- buff size : %" PRI_SIZEU "",
+  inno_log_info("save end -- buff size : %" PRI_SIZELU,
                 buf->size());
   return true;
 }

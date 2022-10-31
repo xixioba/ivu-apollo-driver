@@ -198,7 +198,7 @@ int NetManager::http_get(const char *url,
             int to_receive = content_length - received;
             if (to_receive > buffer_end - cursor) {
               inno_log_error("not enough buffer to get_url %s. "
-                             "buffer_size=%" PRI_SIZEU " response=%s "
+                             "buffer_size=%" PRI_SIZELU " response=%s "
                              "received=%d content_length=%d",
                              url, buffer_size, buffer_out,
                              received, content_length);
@@ -218,7 +218,8 @@ int NetManager::http_get(const char *url,
                 cursor += to_receive;
                 break;
               } else {
-                inno_log_warning("content-length %d to small %" PRI_SIZED " %d",
+                inno_log_warning("content-length %d to small %"
+                                 PRI_SIZELD " %d",
                                  content_length,
                                  z, to_receive);
                 ret = -13;
@@ -244,7 +245,7 @@ int NetManager::http_get(const char *url,
       }
       if (cursor >= buffer_end) {
         inno_log_error("not enough buffer to get_url %s. "
-                       "buffer_size=%" PRI_SIZEU "",
+                       "buffer_size=%" PRI_SIZELU,
                        url, buffer_size);
         ret = -16;
         break;
@@ -263,7 +264,7 @@ int NetManager::http_get(const char *url,
 ssize_t NetManager::recv_full_buffer(int fd, char *buffer,
                                      size_t recv_len, int flag) {
   size_t received = 0;
-  inno_log_trace("recv_full_buffer total to recv %" PRI_SIZEU "",
+  inno_log_trace("recv_full_buffer total to recv %" PRI_SIZELU,
                  recv_len);
   if (recv_len <= 0) {
     return recv_len;
@@ -298,7 +299,7 @@ ssize_t NetManager::recv_full_buffer(int fd, char *buffer,
     if (n < 0) {
       // inno_log_trace("fd=%d n=%d err=%d", fd, n, errno);
     }
-    inno_log_trace("received %d %" PRI_SIZEU "/%" PRI_SIZEU "",
+    inno_log_trace("received %d %" PRI_SIZELU "/%" PRI_SIZELU,
                    n, received, recv_len);
     if (n < 0) {
       if (errno == EINTR) {
@@ -395,7 +396,7 @@ int NetManager::recv_file(int file_fd, int expect_md5,
     if ((n = recv_full_buffer(fd, recvBuff,
                               left < s ? left : s, 0)) < 0) {
       inno_log_error("Error: recv failed a. "
-                     "%" PRI_SIZED "/%d bytes not received",
+                     "%" PRI_SIZELD "/%d bytes not received",
                      left, total_len);
       InnoUtils::close_fd(fd);
       return -2;
@@ -404,7 +405,7 @@ int NetManager::recv_file(int file_fd, int expect_md5,
     ssize_t w = write_full_buffer(file_fd, recvBuff, n);
     if (w < n) {
       inno_log_error_errno("Error: write failed. "
-                     "%" PRI_SIZED " vs %" PRI_SIZED "",
+                     "%" PRI_SIZELD " vs %" PRI_SIZELD,
                      w, n);
       InnoUtils::close_fd(fd);
       return -3;
@@ -563,7 +564,7 @@ int NetManager::send_file(const char *filename, const char *cmd_fmt, ...) {
   // send content
   int sent_size = 0;
   while (sent_size < total_size) {
-#ifndef __MINGW64__
+#if !(defined(_QNX_) || defined(__MINGW64__) || defined(__APPLE__))
     ret = sendfile(fd, file_fd, NULL, total_size - sent_size);
 #else
     char buffer[64 * 1024];
@@ -943,7 +944,7 @@ int NetManager::get_connection(const char *ip,
         InnoUtils::close_fd(fd);
         return -4;
       }
-#if !(defined(_QNX_) || defined(__MINGW64__))
+#if !(defined(_QNX_) || defined(__MINGW64__) || defined(__APPLE__))
       if (setsockopt(fd, IPPROTO_TCP, TCP_QUICKACK, &one, sizeof(one)) < 0) {
         inno_log_error("%s cannot setsockopt tcp_quickack", ip);
         InnoUtils::close_fd(fd);
@@ -951,7 +952,7 @@ int NetManager::get_connection(const char *ip,
       }
 #endif
 
-#ifndef __MINGW64__
+#ifndef __MINGW64__  //! TODO: check if this is necessary for macos
       int rcvbuff = recv_buffer_size;
       if (setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &rcvbuff,
                      sizeof(rcvbuff)) < 0) {
@@ -1055,6 +1056,8 @@ int NetManager::get_connection(const char *ip,
             }
 #endif
           } else {
+            inno_log_error_errno("get_connection timeout for %0.5fs, fd: %d",
+                                  read_timeout_sec, fd);
             // connect timeout
             InnoUtils::close_fd(fd);
             return -13;

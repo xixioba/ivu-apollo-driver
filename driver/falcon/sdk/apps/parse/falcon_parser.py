@@ -3,7 +3,7 @@ import argparse
 import struct
 import time
 import math
-from scapy.all import rdpcap
+#from scapy.all import rdpcap
 
 import os
 

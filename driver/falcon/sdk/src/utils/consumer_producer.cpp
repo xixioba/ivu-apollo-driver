@@ -13,7 +13,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#ifndef __MINGW64__
+#if !(defined(_QNX_) || defined (__MINGW64__))
 #include <sys/syscall.h>
 #endif
 #include <sys/types.h>
@@ -179,7 +179,7 @@ ConsumerProducer::~ConsumerProducer() {
 
 void *ConsumerProducer::consumer_thread_func_(void *context) {
   ConsumerProducer *cp = reinterpret_cast<ConsumerProducer *>(context);
-#if !(defined(_QNX_) || defined (__MINGW64__))
+#if !(defined(_QNX_) || defined (__MINGW64__) || defined(__APPLE__))
   pid_t pid = 0;
   if (cp->cpuset_ && cp->cpusetsize_) {
     const pthread_t tid = pthread_self();
@@ -188,6 +188,8 @@ void *ConsumerProducer::consumer_thread_func_(void *context) {
   }
   pid = syscall(SYS_gettid);
 #else
+  (void)cp->cpusetsize_;
+  (void)cp->cpuset_;
   uint32_t pid = 0;
 #endif
   inno_log_info("thread %s starts. pid=%d target_priority=%d",
@@ -319,7 +321,7 @@ void ConsumerProducer::flush_and_pause() {
                       finished_job_total_() +
                       dropped_job_total_(),
                       "%" PRI_SIZEU " should be bigger %"
-                      PRI_SIZEU " + %" PRI_SIZEU "",
+                      PRI_SIZEU " + %" PRI_SIZEU,
                       added_job_total_(),
                       finished_job_total_(),
                       dropped_job_total_());
@@ -504,13 +506,13 @@ void ConsumerProducer::get_stats_string(char *buf, size_t buf_size) {
       continue;
     }
     int ret = snprintf(buf + len, buf_size - len,
-                       "%s queue#%d added=%" PRI_SIZEU
-                       " finished=%" PRI_SIZEU
-                       " dropped=%" PRI_SIZEU
-                       " blocked=%" PRI_SIZEU
-                       " wait=%" PRI_SIZEU
-                       "us process=%" PRI_SIZEU
-                       "us drop=%" PRI_SIZEU "us "
+                       "%s queue#%d added=%" PRI_SIZELU
+                       " finished=%" PRI_SIZELU
+                       " dropped=%" PRI_SIZELU
+                       " blocked=%" PRI_SIZELU
+                       " wait=%" PRI_SIZELU
+                       "us process=%" PRI_SIZELU
+                       "us drop=%" PRI_SIZELU "us "
                        "pid=%d ",
                        name_, i,
                        added_job_[i], finished_job_[i], dropped_job_[i],
@@ -544,9 +546,9 @@ void ConsumerProducer::get_stats_string(char *buf, size_t buf_size) {
       ratio = active_delta * 100.0 / elapse_delta;
     }
     int ret = snprintf(buf + len, buf_size - len,
-                       "elapsed_time=%" PRI_SIZEU "/%" PRI_SIZEU
-                       "ms active_time=%" PRI_SIZEU
-                       "/%" PRI_SIZEU "ms "
+                       "elapsed_time=%" PRI_SIZELU "/%" PRI_SIZELU
+                       "ms active_time=%" PRI_SIZELU
+                       "/%" PRI_SIZELU "ms "
                        "ratio=%.2f%%/%.2f%%",
                        elapse_delta / 1000000,
                        (end_time - start_time_) / 1000000,

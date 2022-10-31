@@ -49,9 +49,9 @@ RangeImage::RangeImage(float angular_resolution_x, float angular_resolution_y,
   angular_resolution_y_reciprocal_ = 1.0f / angular_resolution_y_;
 
   //
-  width = static_cast<std::uint32_t>(inno_lrint(
+  width = static_cast<uint32_t>(inno_lrint(
       std::floor(max_angle_width * angular_resolution_x_reciprocal_)));
-  height = static_cast<std::uint32_t>(inno_lrint(
+  height = static_cast<uint32_t>(inno_lrint(
       std::floor(max_angle_height * angular_resolution_y_reciprocal_)));
 
   int full_width = static_cast<int>(inno_lrint(
@@ -193,7 +193,7 @@ void RangeImage::insert_point(float x, float y, float z, float reflectance) {
 }
 
 void RangeImage::stop() {
-  inno_log_info("point size : %" PRI_SIZEU "",
+  inno_log_info("point size : %" PRI_SIZELU,
                 this->points.size());
 
   //

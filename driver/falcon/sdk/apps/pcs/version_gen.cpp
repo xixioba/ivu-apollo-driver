@@ -3,7 +3,8 @@
  *
  *  All Rights Reserved.
  *
+ *  $Id$
  */
 
-const char *innovusion_version = "2.7.0-rc297h-arm-public";
-const char *innovusion_build_tag = "release-2.7.0-rc297h-arm";
+const char *innovusion_version = "devbuild";
+const char *innovusion_build_tag = "LOCAL-BUILD";

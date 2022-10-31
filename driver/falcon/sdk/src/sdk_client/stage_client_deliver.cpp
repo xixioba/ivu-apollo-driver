@@ -62,7 +62,7 @@ int StageClientDeliver::process_job_(InnoCommonHeader *pkt, bool prefer) {
   }
   size_t n = pkt->size;
   inno_log_verify(n >= sizeof(InnoCommonHeader),
-                  "%" PRI_SIZEU " vs %" PRI_SIZEU "",
+                  "%" PRI_SIZELU " vs %" PRI_SIZELU,
                   n, sizeof(InnoCommonHeader));
   lidar_->do_recorder_callback(INNO_RECORDER_CALLBACK_TYPE_RAW,
                                reinterpret_cast<char *>(pkt), n);
@@ -90,8 +90,8 @@ int StageClientDeliver::process_job_(InnoCommonHeader *pkt, bool prefer) {
                                         1, n);
 
     } else {
-      inno_log_warning("size mismatch %" PRI_SIZEU
-                       " %" PRI_SIZEU "",
+      inno_log_warning("size mismatch %" PRI_SIZELU
+                       " %" PRI_SIZELU,
                        n, sizeof(InnoStatusPacket));
     }
   } else if (pkt->version.magic_number == kInnoMagicNumberDataPacket) {
@@ -100,7 +100,7 @@ int StageClientDeliver::process_job_(InnoCommonHeader *pkt, bool prefer) {
       if (data_packet->type == INNO_ITEM_TYPE_SPHERE_POINTCLOUD ||
           data_packet->type == INNO_ITEM_TYPE_XYZ_POINTCLOUD) {
         uint64_t start = InnoUtils::get_time_ns(CLOCK_MONOTONIC_RAW);
-        uint64_t start_2;
+        uint64_t start_2 = 0;
         stats_data_jobs_++;
         uint64_t point_count_2nd_return = 0;
         if (lidar_->data_packet_callback_) {
@@ -163,9 +163,9 @@ int StageClientDeliver::process_job_(InnoCommonHeader *pkt, bool prefer) {
             data_packet->item_size <= sizeof(InnoMessage) ||
             data_packet->item_number != 1 ||
             data_packet->item_size != m->size) {
-          inno_log_warning("invalid message n=%" PRI_SIZEU " "
+          inno_log_warning("invalid message n=%" PRI_SIZELU " "
                            "item_size=%u item_num=%u m_size=%u, "
-                           "%" PRI_SIZEU " %" PRI_SIZEU "",
+                           "%" PRI_SIZELU " %" PRI_SIZELU,
                            n, data_packet->item_size,
                            data_packet->item_number,
                            m->size, sizeof(InnoDataPacket),
@@ -179,6 +179,10 @@ int StageClientDeliver::process_job_(InnoCommonHeader *pkt, bool prefer) {
             if (!lidar_->time_sync_set_value.empty()) {
               lidar_->set_attribute_string("time_sync_check",
                lidar_->time_sync_set_value.c_str());
+            }
+            if (!lidar_->frame_sync_time_.empty()) {
+              lidar_->set_attribute_string("server_frame_sync",
+               lidar_->frame_sync_time_.c_str());
             }
           } else if (m->code == INNO_MESSAGE_CODE_MAX_DISTANCE_CHECK_RESULT) {
             InnoMaxDistanceResult check_result{0};
@@ -205,11 +209,11 @@ int StageClientDeliver::process_job_(InnoCommonHeader *pkt, bool prefer) {
         inno_log_warning("unknow data_packet type %u", data_packet->type);
       }
     } else {
-      inno_log_warning("message size mismatch %" PRI_SIZEU " %" PRI_SIZEU "",
+      inno_log_warning("message size mismatch %" PRI_SIZELU " %" PRI_SIZELU,
                        n, sizeof(InnoDataPacket));
     }
   } else {
-    inno_log_warning("bad message, size=%" PRI_SIZEU "", n);
+    inno_log_warning("bad message, size=%" PRI_SIZELU "", n);
   }
   lidar_->free_buffer_(pkt);
   return 0;
@@ -223,7 +227,7 @@ void StageClientDeliver::print_stats() const {
                 "total=%" PRI_SIZEU " total_dropped=%" PRI_SIZEU " "
                 "data=%" PRI_SIZEU " message=%" PRI_SIZEU " status="
                 "%" PRI_SIZEU " points=%" PRI_SIZEU " frames=%" PRI_SIZEU " "
-                "points_2nd_return=%" PRI_SIZEU "",
+                "points_2nd_return=%" PRI_SIZEU,
                 convert_xyz_mean_ms_.mean(),
                 convert_xyz_mean_ms_.std_dev(),
                 convert_xyz_mean_ms_.max(),
@@ -250,7 +254,7 @@ const char *StageClientDeliver::get_name_(void) const {
  * Start to check fault in client sdk.
  * @param pkt  input data packet
  * @param has_force_xyz  has converted to xyz point
- * @return int 
+ * @return int
  */
 int StageClientDeliver::check_lidar_fault_in_client_(
                                 const InnoDataPacket &pkt,
@@ -286,7 +290,7 @@ int StageClientDeliver::update_galvo_check_result_(
             = static_cast<uint16_t>(check_result.mean_deviated_angle * 100);
   char galvo_check_result_str[1024] = {0};
   int got = snprintf(galvo_check_result_str, sizeof(galvo_check_result_str),
-                     "[Galvo Check] frame=%" PRI_SIZELU ", code=%u,count=%u,"
+                     "[Galvo Check] frame=%" PRI_SIZEU ", code=%u,count=%u,"
                      "ext_ref:(%.4f,%.4f,%.4f,%.4f,%.4f,%.4f),"
                      "fit_plane:(%.4f*x+%.4f*y+%.4f*z+%.4f=0),"
                      "rot_vector:(%.4f,%.4f,%.4f),"
@@ -294,7 +298,7 @@ int StageClientDeliver::update_galvo_check_result_(
                      "speed=%.4f,speed_acc=%.4f,R2=%.4f,cos_angle=%.4f,"
                      "dev_angle=%.4f,mean_angle=%.4f,"
                      "angle_r2=%.4f,fault_status=%u,fault_times=%u,"
-                     "valid_times=%d,us=%" PRI_SIZELU "",
+                     "valid_times=%d,us=%" PRI_SIZEU,
                      check_result.frame,
                      static_cast<uint8_t>(check_result.frame_check_code),
                      check_result.points_count,

@@ -38,20 +38,22 @@ const char *InnoPcFrameCapture::pcd_header_ =
     "SIZE 4 4 4 2 1 1 1 1 1 1 1 1 8 2 2 4\n"
     "TYPE F F F U U U U U U U U U F U U U\n"
     "COUNT 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1\n"
-    "WIDTH %lu\n"
+    "WIDTH %" PRI_SIZEU "\n"
     "HEIGHT 1\n"
     "VIEWPOINT 0 0 0 1 0 0 0\n"
-    "POINTS %lu\n"
+    "POINTS %" PRI_SIZEU "\n"
     "DATA %s\n";
 const char *InnoPcFrameCapture::pcd_row_ = "%.3f %.3f %.3f %u %u "
-                           "%u %u %u %u %u %u %u %.5f %u %u %lu\n";
+                           "%u %u %u %u %u %u %u %.5f %u %u %"
+                           PRI_SIZEU "\n";
 
 const char *InnoPcFrameCapture::csv_header_ =
     "x,y,z,%s,channel,roi,facet,is_2nd_return,multi_return,confid_level,"
     "flag,elongation,timestamp,"
     "scanline,scan_idx,frame_id\n";
 const char *InnoPcFrameCapture::csv_row_ = "%.3f,%.3f,%.3f,%u,%u,"
-                           "%u,%u,%u,%u,%u,%u,%u,%.5f,%u,%u,%lu\n";
+                           "%u,%u,%u,%u,%u,%u,%u,%.5f,%u,%u,%"
+                           PRI_SIZEU "\n";
 
 InnoPcFrameCapture::InnoPcFrameCapture(PCS *pcs) {
   pcs_ = pcs;
@@ -70,13 +72,14 @@ InnoPcFrameCapture::InnoPcFrameCapture(PCS *pcs) {
       sizeof(InnoDataPacket) + sizeof(InnoBlock2) * kMaxBlockNum;
   pcd_saved_packet_ =
       reinterpret_cast<InnoDataPacket *>(calloc(pcd_len_saved, 1));
-  inno_log_verify(pcd_saved_packet_, "cannot allocate saved_ %lu",
-                  pcd_len_saved);
+  inno_log_verify(pcd_saved_packet_, "cannot allocate saved_ %"
+                PRI_SIZELU, pcd_len_saved);
 
   size_t pcd_header_len_saved = sizeof(InnoDataPacket) * kMaxPacketNum;
   pcd_saved_packet_headers_ =
       reinterpret_cast<InnoDataPacket *>(calloc(pcd_header_len_saved, 1));
-  inno_log_verify(pcd_saved_packet_headers_, "cannot allocate saved_header %lu",
+  inno_log_verify(pcd_saved_packet_headers_,
+                  "cannot allocate saved_header %" PRI_SIZELU,
                   pcd_header_len_saved);
 }
 
@@ -159,7 +162,8 @@ int InnoPcFrameCapture::add_capture_job(const std::string &type,
       if (job_duration_ > 20) {
         job_duration_ = 20;
       }
-      inno_log_info("add capture pcd job duration=%lu", job_duration_);
+      inno_log_info("add capture pcd job duration=%"
+                    PRI_SIZELU, job_duration_);
       display_job_duration_ = job_duration_;
       job_conn_ = *(std::shared_ptr<WsConnection> *)(ctx);
     } else if (type == "pc" || type == "inno_pc" || type == "inno_pc_xyz") {
@@ -172,7 +176,7 @@ int InnoPcFrameCapture::add_capture_job(const std::string &type,
         job_duration_ = 1;
       }
       display_job_duration_ = job_duration_;
-      inno_log_info("add capture %s job duration=%lu",
+      inno_log_info("add capture %s job duration=%" PRI_SIZELU,
                     type.c_str(), job_duration_);
       job_conn_ = *(std::shared_ptr<WsConnection> *)(ctx);
     } else if (type == "bag") {
@@ -181,7 +185,8 @@ int InnoPcFrameCapture::add_capture_job(const std::string &type,
         job_duration_ = 1;
       }
       display_job_duration_ = job_duration_;
-      inno_log_info("add capture bag job duration=%lu", job_duration_);
+      inno_log_info("add capture bag job duration=%"
+                    PRI_SIZELU, job_duration_);
       job_conn_ = *(std::shared_ptr<WsConnection> *)(ctx);
       bag_stream_status_ = BAG_STREAM_START;
       rosbag_stream_ = new RosbagRecorder("", write_to_wconn_s_,
@@ -195,7 +200,8 @@ int InnoPcFrameCapture::add_capture_job(const std::string &type,
       if (job_duration_ > 20) {
         job_duration_ = 20;
       }
-      inno_log_info("add capture png job duration=%lu", job_duration_);
+      inno_log_info("add capture png job duration=%"
+                    PRI_SIZELU, job_duration_);
       job_conn_ = *(std::shared_ptr<WsConnection> *)(ctx);
 
       inno_log_verify(png_stream_ == NULL, "png_stream_ creating");
@@ -374,7 +380,7 @@ int InnoPcFrameCapture::recorder_callback_raw2_(
                                                                NULL, 0);
     lk.lock();
     end_job_with_lock_();
-    inno_log_info("inno_raw capture %s done sending %lu bytes.",
+    inno_log_info("inno_raw capture %s done sending %" PRI_SIZELU " bytes.",
                   capture_filename_.c_str(), raw2_sent_bytes_);
     return -1;
   } else {
@@ -426,7 +432,8 @@ void InnoPcFrameCapture::send_raw_raw_capture_thread_() {
       }
 
       if (r != sizeof(recvBuff)) {
-        inno_log_warning("error in reading raw raw %ld != %lu",
+        inno_log_warning("error in reading raw raw %"
+                         PRI_SIZELD " != %" PRI_SIZELU,
                          r, sizeof(recvBuff));
         break;
       }
@@ -445,7 +452,7 @@ void InnoPcFrameCapture::send_raw_raw_capture_thread_() {
       total += r;
       size_t kMaxRawRawCaptureSize = 256 * 1024 * 1024;
       if (total >= kMaxRawRawCaptureSize) {
-        inno_log_info("raw_raw captured %lu", total);
+        inno_log_info("raw_raw captured %" PRI_SIZEU, total);
         break;
       }
     }
@@ -531,7 +538,7 @@ void InnoPcFrameCapture::pcd_received_data_packet_(const InnoDataPacket *pkt) {
     // haven't find
     if (pcd_last_frame_ >= 0 && pcd_last_frame_ != ssize_t(pkt->idx)) {
       // first subframe in new frame
-      inno_log_info("capture first frame %lu", pkt->idx);
+      inno_log_info("capture first frame %" PRI_SIZEU, pkt->idx);
 
       pcd_start_frame_ = pkt->idx;
       current_point_in_frame_ = 0;
@@ -539,12 +546,13 @@ void InnoPcFrameCapture::pcd_received_data_packet_(const InnoDataPacket *pkt) {
       pcd_add_data_packet_(pkt);
     }
   } else {
-    inno_log_verify(pcd_last_frame_ >= 0, "pcd_last_frame_ %ld",
+    inno_log_verify(pcd_last_frame_ >= 0, "pcd_last_frame_ %" PRI_SIZED,
                     pcd_last_frame_);
     if (pcd_last_frame_ != ssize_t(pkt->idx)) {
       pcd_frame_captured_++;
       if (pcd_frame_captured_ <= job_duration_) {
-        inno_log_info("capture %u points in frame-%lu-%ld to pcd",
+        inno_log_info("capture %u points in frame-%" PRI_SIZEU
+                      "-%" PRI_SIZED " to pcd",
                       current_point_in_frame_, pcd_frame_captured_,
                       pcd_last_frame_);
       }
@@ -581,7 +589,7 @@ void InnoPcFrameCapture::pc_received_data_packet_(const InnoDataPacket *pkt) {
   if (pcd_start_frame_ < 0) {
     if (pcd_last_frame_ >= 0 && pcd_last_frame_ != ssize_t(pkt->idx)) {
       // first subframe in new frame
-      inno_log_info("capture first frame %lu", pkt->idx);
+      inno_log_info("capture first frame %" PRI_SIZEU, pkt->idx);
 
       pcd_start_frame_ = pkt->idx;
       pcd_last_frame_ = pkt->idx;
@@ -597,19 +605,19 @@ void InnoPcFrameCapture::pc_received_data_packet_(const InnoDataPacket *pkt) {
       enque_pkt = true;
     }
   } else {
-    inno_log_verify(pcd_last_frame_ >= 0, "pcd_last_frame_ %ld",
+    inno_log_verify(pcd_last_frame_ >= 0, "pcd_last_frame_ %" PRI_SIZED,
                     pcd_last_frame_);
     if (pcd_last_frame_ != ssize_t(pkt->idx)) {
       pcd_frame_captured_++;
     }
     if (pcd_frame_captured_ + 1 <= job_duration_) {
       if (pcd_last_frame_ != ssize_t(pkt->idx)) {
-        inno_log_trace("capture frame %lu", pkt->idx);
+        inno_log_trace("capture frame %" PRI_SIZEU, pkt->idx);
       }
       enque_pkt = true;
     } else {
       if (!null_enqueued_) {
-        inno_log_info("stop capturing, last=%ld %lu",
+        inno_log_info("stop capturing, last=%" PRI_SIZED " %" PRI_SIZEU,
                       pcd_last_frame_, pkt->idx);
         std::unique_lock<std::mutex> lk(mutex_);
         pc_packet_deque_.push_back(NULL);
@@ -662,7 +670,7 @@ void InnoPcFrameCapture::pcd_add_data_packet_(const InnoDataPacket *pkt) {
                     job_type_ == CAPTURE_TYPE_PCD_BINARY ||
                     job_type_ == CAPTURE_TYPE_CSV,
                     "job_type_ %d", job_type_);
-    inno_log_verify(pcd_last_frame_ >= 0, "pcd_last_frame_ %ld",
+    inno_log_verify(pcd_last_frame_ >= 0, "pcd_last_frame_ %" PRI_SIZED,
                     pcd_last_frame_);
   }
 
@@ -675,7 +683,8 @@ void InnoPcFrameCapture::pcd_add_data_packet_(const InnoDataPacket *pkt) {
   uint32_t block_to_copy = pkt->item_number;
   if (block_to_copy > block_left) {
     block_to_copy = block_left;
-    inno_log_warning("reach limit kMaxBlockNum %lu", kMaxBlockNum);
+    inno_log_warning("reach limit kMaxBlockNum %"
+                    PRI_SIZELU, kMaxBlockNum);
   }
   current_point_in_frame_ += InnoDataPacketUtils::get_points_count(*pkt);
   for (uint32_t i = 0; i < block_to_copy; i++) {
@@ -704,7 +713,7 @@ void InnoPcFrameCapture::send_pcd_capture_thread_() {
                     job_type_ == CAPTURE_TYPE_PCD_BINARY ||
                     job_type_ == CAPTURE_TYPE_CSV,
                     "job_type_ %d", job_type_);
-    inno_log_verify(pcd_last_frame_ >= 0, "pcd_last_frame_ %ld",
+    inno_log_verify(pcd_last_frame_ >= 0, "pcd_last_frame_ %" PRI_SIZED,
                     pcd_last_frame_);
   }
   int ret;
@@ -737,7 +746,8 @@ void InnoPcFrameCapture::send_pcd_capture_thread_() {
       strlen(buffer));
   if (rt < 0) {
     end_worker_();
-    inno_log_info("pcd capture %s failed sending %lu bytes.",
+    inno_log_info("pcd capture %s failed sending %"
+                  PRI_SIZELD " bytes.",
                   capture_filename_.c_str(), total_sent);
     return;
   }
@@ -756,8 +766,9 @@ void InnoPcFrameCapture::send_pcd_capture_thread_() {
     }
   }
   inno_log_info(
-      "send_capture first_frame=%ld duration=%lu, "
-      "blocks=%u, point=%lu",
+      "send_capture first_frame=%" PRI_SIZED
+      " duration=%" PRI_SIZELU ", "
+      "blocks=%u, point=%" PRI_SIZEU,
       pcd_start_frame_, job_duration_, pcd_block_so_far_, total_points);
   if (job_type_ == CAPTURE_TYPE_CSV) {
     ret = snprintf(buffer, sizeof(buffer),
@@ -777,7 +788,8 @@ void InnoPcFrameCapture::send_pcd_capture_thread_() {
       strlen(buffer));
   if (rt < 0) {
     end_worker_();
-    inno_log_info("pcd capture %s failed sending %lu bytes.",
+    inno_log_info("pcd capture %s failed sending %"
+                  PRI_SIZELU " bytes.",
                   capture_filename_.c_str(), total_sent);
     return;
   }
@@ -798,7 +810,8 @@ void InnoPcFrameCapture::send_pcd_capture_thread_() {
                 : InnoPcFrameCapture::pcd_row_;
   }
   for (size_t i = 0; i < pcd_block_so_far_; i++) {
-    inno_log_verify(current_packet < pcd_packet_so_far_, "%lu vs %u",
+    inno_log_verify(current_packet < pcd_packet_so_far_, "%"
+                    PRI_SIZELU " vs %u",
                     current_packet, pcd_packet_so_far_);
     block = &pcd_saved_packet_->inno_block2s[i];
     InnoBlockFullAngles full_angles;
@@ -860,7 +873,8 @@ void InnoPcFrameCapture::send_pcd_capture_thread_() {
                 byte_so_far);
             if (rt < 0) {
               end_worker_();
-              inno_log_info("pcd capture %s failed sending %lu bytes.",
+              inno_log_info("pcd capture %s failed sending %"
+                            PRI_SIZELU " bytes.",
                             capture_filename_.c_str(), total_sent);
               return;
             }
@@ -875,12 +889,14 @@ void InnoPcFrameCapture::send_pcd_capture_thread_() {
     if (bks_sum + pcd_saved_packet_headers_[current_packet].item_number == i) {
       bks_sum += pcd_saved_packet_headers_[current_packet].item_number;
       current_packet++;
-      inno_log_verify(pcd_packet_so_far_ > current_packet, "%u vs %lu",
+      inno_log_verify(pcd_packet_so_far_ > current_packet,
+                      "%u vs %" PRI_SIZELU,
                       pcd_packet_so_far_, current_packet);
     } else {
       inno_log_verify(
           bks_sum + pcd_saved_packet_headers_[current_packet].item_number > i,
-          "i=%lu bks_sum=%lu current_packet=%lu %u %u", i, bks_sum,
+          "i=%" PRI_SIZELU " bks_sum=%" PRI_SIZELU
+          " current_packet=%" PRI_SIZELU " %u %u", i, bks_sum,
           current_packet, pcd_block_so_far_, pcd_packet_so_far_);
     }
   }
@@ -889,7 +905,7 @@ void InnoPcFrameCapture::send_pcd_capture_thread_() {
           (pcd_packet_so_far_ == current_packet + 1 &&
            bks_sum + pcd_saved_packet_headers_[current_packet].item_number >=
                pcd_block_so_far_),
-      "bks_sum=%lu current_packet=%lu"
+      "bks_sum=%" PRI_SIZELU " current_packet=%" PRI_SIZELU ""
       " pcd_packet_so_far_=%u pcd_block_so_far_%u",
       bks_sum, current_packet, pcd_packet_so_far_, pcd_block_so_far_);
   if (byte_so_far != 0) {
@@ -898,7 +914,7 @@ void InnoPcFrameCapture::send_pcd_capture_thread_() {
         byte_so_far);
     if (rt < 0) {
       end_worker_();
-      inno_log_info("pcd capture %s failed sending %lu bytes.",
+      inno_log_info("pcd capture %s failed sending %" PRI_SIZELU " bytes.",
                     capture_filename_.c_str(), total_sent);
       return;
     }
@@ -908,14 +924,14 @@ void InnoPcFrameCapture::send_pcd_capture_thread_() {
                                                             NULL, 0);
   if (rt < 0) {
     end_worker_();
-    inno_log_info("pcd capture %s failed sending %lu bytes.",
+    inno_log_info("pcd capture %s failed sending %" PRI_SIZELU " bytes.",
                   capture_filename_.c_str(), total_sent);
     return;
   }
   PcServerWsProcessor::flush_buffer_s(&job_conn_);
 
   end_worker_();
-  inno_log_info("pcd capture %s done sending %lu bytes.",
+  inno_log_info("pcd capture %s done sending %" PRI_SIZELU " bytes.",
                 capture_filename_.c_str(), total_sent);
 }
 
@@ -925,7 +941,7 @@ void InnoPcFrameCapture::send_inno_pc_capture_thread_() {
     inno_log_verify(job_type_ == CAPTURE_TYPE_PC ||
                     job_type_ == CAPTURE_TYPE_PC_XYZ,
                     "job_type_ %d", job_type_);
-    inno_log_verify(pcd_last_frame_ >= 0, "pcd_last_frame_ %ld",
+    inno_log_verify(pcd_last_frame_ >= 0, "pcd_last_frame_ %" PRI_SIZEU,
                     pcd_last_frame_);
   }
   const size_t kMaxChunkLen = 65536 * 4;
@@ -999,7 +1015,7 @@ void InnoPcFrameCapture::send_inno_pc_capture_thread_() {
     clear_pc_packet_deque_w_lock_();
     end_worker_with_lock_();
   }
-  inno_log_info("inno_pc capture %s done sending %lu bytes.",
+  inno_log_info("inno_pc capture %s done sending %" PRI_SIZELU " bytes.",
                 capture_filename_.c_str(), total_sent);
 }
 
@@ -1126,7 +1142,7 @@ void InnoPcFrameCapture::send_png_capture_thread_() {
           &job_conn_, http, strlen(http));
 
       // send body
-      inno_log_info("sending png, size: %lu", buf.size());
+      inno_log_info("sending png, size: %" PRI_SIZELD, buf.size());
       ret = PcServerWsProcessor::write_chunk_to_ws_socket_full_s(
           &this->job_conn_, buf.data(), buf.size());
 

@@ -99,15 +99,59 @@ void LidarSource::init_() {
       inno_log_error("set force_xyz_pointcloud return %d", ret);
     }
   }
-
-  ret = set_reflectance_mode(config_.reflectance);
-  if (ret != 0) {
-    inno_log_error("set_reflectance return %d", ret);
+  bool is_server = is_pc_server();
+  bool need_set = false;
+  InnoReflectanceMode reflectance = config_.reflectance;
+  if (is_server) {
+    std::string reflectance_mode;
+    ret = get_attribute("reflectance_mode", &reflectance_mode);
+    if (ret == 0) {
+      int reflect_tmp = std::stoi(reflectance_mode);
+      if (reflect_tmp > INNO_REFLECTANCE_MODE_NONE &&
+          reflect_tmp < INNO_REFLECTANCE_MODE_MAX) {
+        reflectance = InnoReflectanceMode(reflect_tmp);
+        inno_log_info("use reflectance_mode %d from fw", reflect_tmp);
+      } else {
+        need_set = true;
+        inno_log_error("got invalid value: %d", reflect_tmp);
+      }
+    } else {
+      need_set = true;
+      inno_log_error("fail to query reflectance_mode from fw: %d. "
+                      "use default %d", ret, reflectance);
+    }
+  } else {
+    need_set = true;
+  }
+  if (need_set) {
+    ret = set_reflectance_mode(reflectance);
+    if (ret != 0) {
+      inno_log_error("get_reflectance return %d", ret);
+    }
   }
 
-  ret = set_return_mode(config_.multireturn);
+  InnoMultipleReturnMode muti_return = config_.multireturn;
+  if (is_server) {
+    std::string multi_return_mode;
+    ret = get_attribute("multiple_return", &multi_return_mode);
+    if (ret == 0) {
+      int muti_return_tmp = std::stoi(multi_return_mode);
+      if (muti_return_tmp > INNO_MULTIPLE_RETURN_MODE_NONE &&
+          muti_return_tmp < INNO_MULTIPLE_RETURN_MODE_MAX) {
+        muti_return = InnoMultipleReturnMode(muti_return_tmp);
+        inno_log_info("use mutiple_return_mode %d from fw", muti_return_tmp);
+      } else {
+        inno_log_error("got invalid value: %d", muti_return_tmp);
+      }
+    } else {
+      inno_log_error("fail to query multiple_return from fw: %d. "
+                     "use default %d", ret, muti_return);
+    }
+  }
+  // we should call set return mode because we may write regs
+  ret = set_return_mode(muti_return);
   if (ret != 0) {
-    inno_log_error("set_return %d", ret);
+    inno_log_error("set_multi_return %d", ret);
   }
 
   if (config_.set_falcon_eye) {
@@ -230,7 +274,7 @@ int LidarSource::get_attribute(const std::string &cmd, std::string *result) {
                                      &pre_mode, &status,
                                      &in_transition_mode_ms);
     if (ret == 0) {
-      snprintf(buffer, sizeof(buffer), "%d,%d,%d,%lu",
+      snprintf(buffer, sizeof(buffer), "%d,%d,%d,%" PRI_SIZEU,
                static_cast<int>(mode), static_cast<int>(pre_mode),
                static_cast<int>(status),
                in_transition_mode_ms);
@@ -356,6 +400,18 @@ bool LidarSource::is_live_direct_memory() {
     return false;
   }
   return is_live_direct_memory_lidar == "1";
+}
+
+bool LidarSource::is_live_lidar() {
+  std::string res;
+  int ret = get_attribute("is_live_lidar", &res);
+  return ret == 0 && res == "yes";
+}
+
+bool LidarSource::is_pc_server() {
+  std::string res;
+  int ret = get_attribute("is_pc_server", &res);
+  return ret == 0 && res == "server";
 }
 
 }  // namespace innovusion

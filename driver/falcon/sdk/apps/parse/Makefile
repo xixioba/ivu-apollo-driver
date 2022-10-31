@@ -27,8 +27,11 @@ INNO_CLIENT_LIBS = -linnolidarsdkclient -linnolidarsdkcommon -linnolidarutils
 
 OTHER_LIBS = -ldl -lstdc++ -lm -lpcap  -pthread
 STATIC_LIB_FILES := $(patsubst %, $(LIB_DIR)/%, $(STATIC_LIB))
-.PHONY: all
-all: build
+
+ifeq ($(ARCH_TAG), -macos)
+	LINKFLAGS =
+	CFLAGS += -Wno-error=unused-private-field -Wno-error=format
+endif
 
 ifeq ($(ARCH_TAG), -arm)
 build: lint
@@ -37,18 +40,21 @@ build: lint parse_pcap
 else
 build: inno_falcon_b_parse.so lint parse_pcap
 endif
+
 parse_pcap :$(SRC_C) $(STATIC_LIB_FILES)
 	$(CC) $(CFLAGS) $^ -o $@ -I ./ $(OTHER_LIBS)
 
 
 inno_falcon_b_parse.so : $(SRC_PYTHON) $(STATIC_LIB_FILES)
-	g++ -O3 -Wall -shared -std=c++11 -I ../../src -I 3rdparty/eigen-git-mirror -I 3rdparty/pybind11/include -fPIC -Wl,-undefined,dynamic_lookup `python3-config --includes` $^ -o $@
+	-g++ -O3 -Wall -shared -std=c++11 -I ../../src -I 3rdparty/eigen-git-mirror -I 3rdparty/pybind11/include -I $(EIGEN_DIR) -fPIC -Wl,-undefined,dynamic_lookup `python3-config --includes` $^ -o $@
+
+.PHONY: all
+all: build
 
 .PHONY : clean
 clean:
 	rm -f *.so* *.o lint_checked
-	
-	
+
 .PHONY: lint
 lint: lint_checked
 

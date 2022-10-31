@@ -7,8 +7,14 @@
  */
 
 #include <unistd.h>
+#ifdef __APPLE__
+#include <sys/syslimits.h>
+#elif defined(__MINGW64__)
+#include <windows.h>
+#else
 #include <linux/limits.h>
 #include <mcheck.h>
+#endif
 
 #include "src/sdk_common/inno_lidar_api.h"
 #include "src/utils/inno_lidar_log.h"
@@ -35,6 +41,7 @@ static void launch_viewer(const innovusion::CommandParser &cmd_parser) {
   }
   char cmd[PATH_MAX + 1024];
   char result[PATH_MAX];
+#ifndef __MINGW64__
   ssize_t count = readlink("/proc/self/exe", result, PATH_MAX);
   std::string path = std::string(result, (count > 0) ? count : 0);
   size_t found = path.find_last_of("/\\");
@@ -47,6 +54,13 @@ static void launch_viewer(const innovusion::CommandParser &cmd_parser) {
   inno_log_info("about to run: %s", cmd);
   r = system(cmd);
   inno_log_info("cmd issued, ret: %d", r);
+#else
+  inno_log_info(
+      "Please open url in browser: "
+      "http://viewer.innovusion.com/stable/?url=127.0.0.1&port=%d/stream \n "
+      "http://viewer.innovusion.info/stable/?url=127.0.0.1&port=%d/stream",
+      cmd_parser.tcp_port, cmd_parser.tcp_port);
+#endif
 }
 
 int main(int argc, char *argv[]) {
@@ -58,7 +72,10 @@ int main(int argc, char *argv[]) {
   // step2: check and config Log
   // set up logs without callback
   if (cmp.debug_level > INNO_LOG_LEVEL_INFO) {
+//! TODO: need fix this for macos/windows
+#if !(defined(__APPLE__) || defined(__MINGW64__))
     mtrace();
+#endif
   }
   inno_lidar_set_logs(cmp.quiet ? -1 : 1,
                       cmp.quiet ? -1 : 2,

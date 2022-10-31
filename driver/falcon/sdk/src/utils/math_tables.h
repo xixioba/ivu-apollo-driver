@@ -51,8 +51,8 @@ class MathTables {
  public:
   inline static void verify_unit(size_t unit) {
     inno_log_verify(unit == kInnoAngleUnitPerPiRad,
-                    "unit doesn't match %" PRI_SIZEU
-                    " vs %" PRI_SIZEU "",
+                    "unit doesn't match %" PRI_SIZELU
+                    " vs %" PRI_SIZELU,
                     unit, kInnoAngleUnitPerPiRad);
   }
   inline static double degree_to_rad(double v) {
@@ -200,4 +200,3 @@ class MathTables {
 }  // namespace innovusion
 
 #endif  // UTILS_MATH_TABLES_H_
-

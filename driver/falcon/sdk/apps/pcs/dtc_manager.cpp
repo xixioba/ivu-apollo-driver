@@ -406,9 +406,13 @@ void FwFaultListener::fw_listener_loop_() {
                   "snprintf sun_path: %d", ret);
   int bind_ret = bind(sock_fd_, (const sockaddr*)&un, sizeof(un));
   inno_log_verify(bind_ret >= 0, "fail to bind: %d", bind_ret);
-
+#ifndef __MINGW64__
   int set_socket_opt = setsockopt(sock_fd_, SOL_SOCKET, SO_RCVTIMEO, &tv_,
                                   sizeof(tv_));
+#else
+  int set_socket_opt = setsockopt(sock_fd_, SOL_SOCKET, SO_RCVTIMEO,
+                                  (const char*)&tv_, sizeof(tv_));
+#endif
   inno_log_verify(set_socket_opt >= 0,
                   "failed to set receive timeout value: %d", set_socket_opt);
   inno_log_info("UNIX domain socket initialized OK");

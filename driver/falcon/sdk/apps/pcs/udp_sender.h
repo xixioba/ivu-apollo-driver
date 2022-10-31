@@ -12,9 +12,13 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#ifndef __MINGW64__
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#else
+#include <ws2tcpip.h>
+#endif
 
 #include <string>
 

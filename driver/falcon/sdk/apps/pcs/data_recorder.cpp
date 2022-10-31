@@ -61,7 +61,8 @@ int DataRecorder::write(const void *buffer, size_t size) {
          && (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)) {
   }
   if (written < 0) {
-    inno_log_error_errno("cannot write data recorder %s, %lu bytes",
+    inno_log_error_errno("cannot write data recorder %s, %"
+                         PRI_SIZELU " bytes",
                          filename_.c_str(), size);
     close_file_();
     return -1;
@@ -74,7 +75,8 @@ int DataRecorder::write(const void *buffer, size_t size) {
 void DataRecorder::close_file_() {
   if (fd_ >= 0) {
     close(fd_);
-    inno_log_info("data recorder file %s saved. size=%luM",
+    inno_log_info("data recorder file %s saved. size=%"
+                  PRI_SIZELU "M",
                   filename_.c_str(), written_/1000/1000);
     fd_ = -1;
   }

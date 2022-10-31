@@ -149,7 +149,7 @@ TEST_F(AdapterTest, DataPrase) {
     EXPECT_EQ(ref_point_ns, real_point_ns);
   }
 
-  delete frame;
+  free(frame);
 }
 
 // live reconnect test -> falcon

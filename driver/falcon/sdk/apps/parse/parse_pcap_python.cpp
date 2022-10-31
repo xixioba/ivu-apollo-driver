@@ -89,14 +89,14 @@ Eigen::MatrixXd parse_data(char *data, int len) {
   data_counter++;
   // sanity check after relase-2.0.0-rc138
   if (!InnoDataPacketUtils::check_data_packet(*pkt, 0)) {
-    inno_log_error("corrupted pkt->idx = %lu", pkt->idx);
+    inno_log_error("corrupted pkt->idx = %" PRI_SIZEU, pkt->idx);
     error_data_counter++;
     total_failed_counter++;
     return Eigen::MatrixXd::Zero(1, 1);
   }
   current_sub_frame_ = pkt->sub_idx;
   if (frame_so_far_ >= 0 && expect_sub_frame_ != current_sub_frame_) {
-    inno_log_error("UDP sub frame the current_cframe_id_ is %lu"
+    inno_log_error("UDP sub frame the current_cframe_id_ is %" PRI_SIZELD
                   "expect_sub_frame = %u, but current_sub_frame = %u",
                   current_cframe_id_, expect_sub_frame_, current_sub_frame_);
     miss_sub_frame_times++;
@@ -104,8 +104,8 @@ Eigen::MatrixXd parse_data(char *data, int len) {
   expect_sub_frame_ = current_sub_frame_ + 1;
   if (next_new_frame_) {
     if (current_cframe_id_ + 1 != (int64_t)(pkt->idx)) {
-      inno_log_warning("UDP frame the expect is %lu"
-                      "but the receive frame is %lu",
+      inno_log_warning("UDP frame the expect is %" PRI_SIZELD
+                      "but the receive frame is %" PRI_SIZEU,
                        current_cframe_id_ + 1, pkt->idx);
     } else {
       next_new_frame_ = false;
@@ -133,9 +133,9 @@ Eigen::MatrixXd parse_data(char *data, int len) {
     frame_counter++;
     if (frame_so_far_ > 0) {
       if (expect_frame_ != ssize_t(pkt->idx)) {
-        inno_log_warning("The expect frame is %lu,"
-                          "but the current frame is %ld",
-                            expect_frame_, ssize_t(pkt->idx));
+        inno_log_warning("The expect frame is %" PRI_SIZELD ","
+                          "but the current frame is %" PRI_SIZELD,
+                          expect_frame_, ssize_t(pkt->idx));
         miss_frame_counter += (ssize_t(pkt->idx) - expect_frame_);
       }
       pcd.conservativeResize(current_cframe_items, 6);
@@ -198,7 +198,7 @@ bool parse_status(char *data, int len) {
   status_counter++;
   // sanity check after relase-2.0.0-rc138
   if (!InnoDataPacketUtils::check_status_packet(*pkt, 0)) {
-    inno_log_warning("corrupted pkt->idx = %lu", pkt->idx);
+    inno_log_warning("corrupted pkt->idx = %" PRI_SIZEU , pkt->idx);
     error_status_counter++;
     return false;
   }
@@ -210,7 +210,7 @@ bool parse_message(char *data, int len) {
   message_counter++;
   // sanity check after relase-2.0.0-rc138
   if (!InnoDataPacketUtils::check_data_packet(*pkt, 0)) {
-    inno_log_warning("corrupted pkt->idx = %lu", pkt->idx);
+    inno_log_warning("corrupted pkt->idx = %" PRI_SIZEU , pkt->idx);
     error_message_counter++;
     return false;
   }
@@ -276,14 +276,18 @@ Eigen::MatrixXd parse_inno_package(char *data, int len, int debug_index) {
 
 void summary_print() {
   inno_log_info("----------Summary----------\n"
-              "data_counter = %lu, error_data_counter = %lu\n"
-              "frame_counter = %lu, miss_frame_counter = %lu, "
-                                "miss_sub_frame_times = %lu\n"
-              "message_counter = %lu, error_message_counter = %lu\n"
-              "status_counter = %lu, error_status_counter = %lu\n"
-              "total_receive_counter = %lu\n"
-              "total_successfully_counter = %lu,"
-              "total_failed_counter = %lu\n",
+              "data_counter = %" PRI_SIZEU
+              ", error_data_counter = %" PRI_SIZEU "\n"
+              "frame_counter = %" PRI_SIZEU
+              ", miss_frame_counter = %" PRI_SIZEU ", "
+              "miss_sub_frame_times = %" PRI_SIZEU "\n"
+              "message_counter = %" PRI_SIZEU
+              ", error_message_counter = %" PRI_SIZEU "\n"
+              "status_counter = %" PRI_SIZEU
+              ", error_status_counter = %" PRI_SIZEU "\n"
+              "total_receive_counter = %" PRI_SIZEU "\n"
+              "total_successfully_counter = %" PRI_SIZEU ","
+              "total_failed_counter = %" PRI_SIZEU "\n",
               data_counter, error_data_counter,
               frame_counter, miss_frame_counter, miss_sub_frame_times,
               message_counter, error_message_counter,

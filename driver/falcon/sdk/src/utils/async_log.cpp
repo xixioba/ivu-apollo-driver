@@ -110,7 +110,8 @@ void AsyncLogManager::shutdown() {
  * @return int :0: normal enqueue 1: block enqueue 2: give up enqueue
  *         3: discard head and enqueue
  */
-int AsyncLogManager::add_log_job(const logContextInfo &log_info_p) {
+int AsyncLogManager::add_log_job(const logContextInfo &log_info_p,
+                                 bool discardable) {
   int ret = 0;
   logContextInfo *buffer_p = 0;
   // calculate the context
@@ -157,8 +158,9 @@ int AsyncLogManager::add_log_job(const logContextInfo &log_info_p) {
     } else {
       // error cannot be dropped
       ret = cp_async_job_thread_->add_job(
-          reinterpret_cast<void*>(buffer_p), false,
-          buffer_p->level <= INNO_LOG_LEVEL_ERROR);
+            reinterpret_cast<void*>(buffer_p), false,
+            buffer_p->level <= INNO_LOG_LEVEL_ERROR ||
+            !discardable);
     }
   } else {
     ret = -1;

@@ -3,7 +3,12 @@
  *
  *  All Rights Reserved.
  *
+ *  $Id$
  */
+#ifndef CUSTOMER_RELEASE
+static const char inno_api_version_g[] = "DEV-internal";
+#else
+static const char inno_api_version_g[] = "DEV";
+#endif
 
-const static char inno_api_version_g[] = "2.3.0.20220721102449";
-const static char inno_api_build_tag_g[] = "release-2.7.0-rc297h-arm";
+static const char inno_api_build_tag_g[] = "LOCAL-BUILD";
